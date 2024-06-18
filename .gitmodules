@@ -1,0 +1,3 @@
+[submodule "extern/PiggyPlugins"]
+	path = extern/PiggyPlugins
+	url = git@github.com:agge3/agge-plugins-tmp.git
