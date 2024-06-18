@@ -3,8 +3,8 @@ plugins {
 }
 
 dependencies {
-    compileOnly project(":EthansApi")
-    compileOnly project(":PiggyUtils")
+    compileOnly project(":lib:EthansApi")
+    compileOnly project(":lib:PiggyUtils")
 }
 
 sourceSets {

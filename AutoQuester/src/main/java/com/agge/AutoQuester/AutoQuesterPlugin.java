@@ -67,10 +67,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 
 @PluginDescriptor(
-        name = "<html><font color=\"#FF9DF9\">[PP]</font> AutoQuester</html>",
+        name = "<html><font color=\"#73D216\">[A3]</font> AutoQuester</html>",
         description = "AutoQuest for easy quest points!",
         enabledByDefault = false,
-        tags = {"agge", "piggy", "plugin"}
+        tags = {"agge", "plugin"}
 )
 
 @Slf4j

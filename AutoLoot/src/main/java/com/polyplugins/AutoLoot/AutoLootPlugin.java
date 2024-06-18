@@ -53,10 +53,10 @@ import com.polyplugins.AutoLoot.IntPtr;
 import java.util.*;
 
 @PluginDescriptor(
-        name = "<html><font color=\"#FF9DF9\">[PP]</font> AutoLoot</html>",
+        name = "<html><font color=\"#73D216\">[A3]</font> AutoLoot</html>",
         description = "Modular looting automation",
         enabledByDefault = false,
-        tags = {"piggy", "plugin"}
+        tags = {"agge", "plugin"}
 )
 @Slf4j
 
@@ -237,7 +237,6 @@ public class AutoLootPlugin extends Plugin {
              *    }
              * }
              */
-        }
 	}
 
     @Subscribe
