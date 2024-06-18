@@ -1,0 +1,481 @@
+/**
+ * @file Registry.java
+ * @class Registry
+ * Master instruction registry. Instructions go here!
+ * The purpose of the registry is: (1) have a localized registry of 
+ * instructions, (2) have simple-call wrapper functions that shouldn't polute 
+ * the global namespace, (3) allow conditional call of registered instruction
+ * sets in the global namespace.
+ *
+ * @author agge3
+ * @version 1.0
+ * @since 2024-06-16
+ *
+ */
+
+package com.agge.AutoQuester;
+
+import com.example.EthanApiPlugin.Collections.ETileItem;
+import com.example.EthanApiPlugin.Collections.Inventory;
+import com.example.EthanApiPlugin.Collections.NPCs;
+import com.example.EthanApiPlugin.Collections.TileItems;
+import com.example.EthanApiPlugin.Collections.query.TileItemQuery;
+import com.example.EthanApiPlugin.EthanApiPlugin;
+import com.example.InteractionApi.InventoryInteraction;
+import com.example.Packets.*;
+import com.google.inject.Inject;
+import com.google.inject.Provides;
+import com.piggyplugins.PiggyUtils.API.PlayerUtil;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.*;
+import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.events.*;
+import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.NpcLootReceived;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.ItemStack;
+import net.runelite.client.input.KeyManager;
+import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.HotkeyListener;
+import static net.runelite.api.TileItem.OWNERSHIP_SELF;
+import static net.runelite.api.TileItem.OWNERSHIP_GROUP;
+import com.agge.AutoQuester.AutoQuesterConfig;
+import com.agge.AutoQuester.AutoQuesterOverlay;
+import com.agge.AutoQuester.AutoQuesterTileOverlay;
+import com.agge.AutoQuester.Util;
+import com.agge.AutoQuester.IntPtr;
+import net.runelite.api.widgets.Widget;
+import com.example.EthanApiPlugin.Collections.Widgets;
+import com.agge.AutoQuester.Pathing;
+import com.agge.AutoQuester.Instructions;
+import com.agge.AutoQuester.Action;
+import com.example.InteractionApi.NPCInteraction;
+import com.example.InteractionApi.ShopInteraction;
+import com.example.InteractionApi.InventoryInteraction;
+import com.example.InteractionApi.TileObjectInteraction;
+import com.example.PacketUtils.WidgetInfoExtended;
+import net.runelite.api.Client;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.NpcID;
+import net.runelite.api.ObjectID;
+
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.awt.event.KeyEvent;
+import java.util.function.BooleanSupplier;
+
+@Slf4j
+public class Registry {
+    /** 
+     * Instantiate Plugin Context for the Registry. 
+     * Initialize new Random seed each Registry instance.
+     */
+    public Registry(Context ctx)
+    {
+        log.info("Constructing Registry!");
+        // Instance context.
+        this._pathing = ctx.pathing;
+        this._instructions = ctx.instructions;
+        this._action = ctx.action;
+
+        this._rand = new Random();
+        // Random between 1 and 3 (inclusive).
+        minWait = 1 + _rand.nextInt(3);
+        // Random between 2 and 4 (inclusive).
+        shortCont = 2 + _rand.nextInt(3);
+        // Random between 3 and 6 (inclusive).
+        medCont = 3 + _rand.nextInt(4);   
+        // Random between 7 and 12 (inclusive).
+        longCont = 7 + _rand.nextInt(6);  
+        // Random between 10 and 15 (inclusive).
+        shortWait = 10 + _rand.nextInt(6);
+        // Random between 20 and 35 (inclusive).
+        medWait = 20 + _rand.nextInt(16);   
+        // Random between 50 and 120 (inclusive).
+        longWait = 50 + _rand.nextInt(71);
+    }
+
+    // Register all the instructions, these will return TRUE when they should 
+    // be removed. Then move on to the next instruction.
+    public void testInstructions()
+    {
+        //reg(() -> this._pathing.pathTo(veos),
+        //        Optional.empty());
+        //reg(() -> this._pathing.isPathing(),
+        //        Optional.empty());
+        //path(new WorldPoint(3112, 3246, 0));
+        ////// Shop keeper
+        ////reg(() -> this.pathing.pathTo(new WorldPoint(3112, 3246, 0)),
+        ////        Optional.empty()); 
+    
+        //trade("Shop keeper");
+
+        //// Using class Action and class XXXInteraction interchangably, whatever
+        //// makes the most sense.
+        //reg(() -> ShopInteraction.buyOne("Spade"),
+        //        Optional.empty());
+    }
+
+    public void xMarksTheSpot() 
+    {
+        path(3228, 3242);
+
+        // Full Veos dialogue.
+        talk("Veos");
+        cshort();
+        dialogue("I'm looking for a quest.", 2);
+        clong();
+        dialogue("Yes", 1);
+        cmed();
+        dialogue("Okay, thanks Veos.", 1);
+        cmed();
+
+        // Shop keeper
+        path(3112, 3246);
+        trade("Shop keeper");
+        
+        // Using class Action and class XXXInteraction interchangably, whatever
+        // makes the most sense.
+        registery(() -> ShopInteraction.buyOne("Spade"), null);
+
+        // Dig 1
+        path(3230, 3209);
+        interact("Spade", "Dig", INVENTORY);
+        // Dig 2
+        path(3203, 3212);
+        interact("Spade", "Dig", INVENTORY);
+        // Dig 3
+        path(3109, 3264);
+        interact("Spade", "Dig", INVENTORY);
+        // Dig 4
+        path(3078, 3259);
+        interact("Spade", "Dig", INVENTORY);
+
+        // Final Veos
+        path(3054, 3245);
+        talk("Veos");
+        clong();
+        // 2 here, to make sure
+        clong();
+        // Start pathing
+        path(3054, 3245);
+        // Will get caught in another dialogue
+        clong();
+    }
+
+    public void sheepShearer()
+    {
+        // Fred the Farmer, pickup shears
+        path(new WorldPoint(3190, 3273, 0));
+        interact("Shears", TAKE, TILE_ITEM);
+
+        // Go to sheep pen
+        path(new WorldPoint(3201, 3268, 0));
+        // Collect 20 wool.
+        for (int i = 0; i < 3; i++) {
+            interact(NpcID.SHEEP_2786, "Shear", NPC);   // 1
+            block(longCont);
+            interact(NpcID.SHEEP_2699, "Shear", NPC);   // 2
+            block(longCont);
+            interact(NpcID.SHEEP_2787, "Shear", NPC);   // 3
+            block(longCont);
+            interact(NpcID.SHEEP_2693, "Shear", NPC);   // 4
+            block(longCont);
+            interact(NpcID.SHEEP_2694, "Shear", NPC);   // 5
+            block(longCont);
+            interact(NpcID.SHEEP_2699, "Shear", NPC);   // 6
+            block(longCont);
+            interact(NpcID.SHEEP_2695, "Shear", NPC);   // 7
+            block(medWait);
+        }                                               // = 21
+        
+        // Go to Lumbridge Castle staircase
+        path(new WorldPoint(3206, 3208, 0));
+        interact(ObjectID.STAIRCASE_16671, "Climb-up", TILE_OBJECT);
+        block(longCont);
+        
+        path(new WorldPoint(3209, 3213, 1));
+        interact("Spinning wheel", "Spin", TILE_OBJECT);
+        register(() -> _action.pressSpace());
+        block(medWait);
+        
+        // Climb-down stairs
+        path(new WorldPoint(3206, 3214, 1));
+        path(new WorldPoint(3205, 3209, 1));
+        interact("Staircase", "Climb-down", TILE_OBJECT);
+        
+        // Go back to Fred
+        path(new WorldPoint(3190, 3273, 0));
+        talk("Fred the Farmer");
+
+        cont();
+        dialogue("I'm looking for a quest.", 1);
+        clong();
+        dialogue("Yes.", 1);
+        clong();
+    }
+
+    public void cooksAssistant()
+    {
+        //if (!AutoQuesterConfig.startedCooksAssistant) {
+        path(new WorldPoint(3208, 3216, 0));
+        talk("Cook");
+        register(() -> this._action.continueDialogue(), null);
+        register(() -> this._action.selectDialogue(
+            "You don't look very happy.", 3), null);
+        register(() -> this._action.continueDialogue(), shortCont);
+        register(() -> this._action.selectDialogue(
+            "What's wrong?", 1), null);
+        register(() -> this._action.continueDialogue(), medCont);
+        yes();
+        cshort();
+        dialogue("Actually, I know where to find this stuff", 4);
+        cont();
+        interact("Pot", TAKE, TILE_ITEM);
+        block(minWait);
+        debug();
+        // Trapdoor ID = 14880
+        interact(String.valueOf(14880), "Climb-down", TILE_OBJECT);
+        block(medCont);
+        debug();
+        register(() -> this._action.interactTileItem(
+            "Bucket", Integer.valueOf(TAKE)), null);
+        register(() -> this._action.block(shortWait), null);
+        interact(String.valueOf(17385), "Climb-up", TILE_OBJECT);
+        path(3252, 3266);
+        path(3254, 3271);
+        interact(String.valueOf(ObjectID.DAIRY_COW), "Milk", TILE_OBJECT);
+        block(longCont);
+        path(3163, 3288);
+        path(3162, 3292);
+        interact("Wheat", "Pick", TILE_OBJECT);
+        block(shortWait);
+        path(3164, 3306);
+        interact(12964, "Climb-up", TILE_OBJECT);
+        block(medCont);
+
+        interact(12965, "Climb-up", TILE_OBJECT);
+        block(medCont);
+        interact(ObjectID.HOPPER_24961, "Fill", TILE_OBJECT);
+        block(medCont);
+        interact(ObjectID.HOPPER_CONTROLS_24964, "Operate", TILE_OBJECT);
+        block(shortWait);
+        interact(12966, "Climb-down", TILE_OBJECT);
+        block(medCont);
+        interact(12965, "Climb-down", TILE_OBJECT);
+        block(medCont);
+        interact(1781, "Empty", TILE_OBJECT);
+        block(medCont);
+        //path(3167, 3303);
+        //interact(1524, "Open", TILE_OBJECT);
+        path(3186, 3278);
+        interact("Egg", TAKE, TILE_ITEM);
+        path(new WorldPoint(3208, 3216, 0));
+        talk("Cook");
+        clong();
+    }
+
+    /**
+     * Utility functions specific to the registry.
+     */
+    // Local macros to register common instructions less verbosely.
+    private void register(BooleanSupplier f, Integer n)
+    {
+        if (n == null)
+            _instructions.register(f, "Undefined instruction", Optional.empty());
+        else
+            _instructions.register(f, "Undefined instruction", Optional.of(n));
+    }
+
+    private void path(WorldPoint wp)
+    {
+        _instructions.register(() -> _pathing.pathTo(wp), "Path to: " + wp);
+        _instructions.register(() -> _pathing.isPathing(), "Pathing to: " + wp);
+    }
+
+    private void path(int x, int y)
+    {
+        WorldPoint wp = new WorldPoint(x, y, 0);
+        _instructions.register(() -> _pathing.pathTo(wp), "Path to: " + wp);
+        _instructions.register(() -> _pathing.isPathing(), "Pathing to: " + wp);
+    }
+
+    private void path(int x, int y, int z)
+    {
+        WorldPoint wp = new WorldPoint(x, y, z);
+        _instructions.register(() -> _pathing.pathTo(wp), "Path to: " + wp);
+        _instructions.register(() -> _pathing.isPathing(), "Pathing to: " + wp);
+    }
+    
+    private void talk(String name)
+    {
+        _instructions.register(() -> _action.interactNPC(name, "Talk-to"), 
+                "Talk to: " + name);
+    }
+
+    private void trade(String name)
+    {
+        _instructions.register(() -> _action.interactNPC(name, "Trade"), 
+                "Trade: " + name);
+    }
+
+    private void sup()
+    {
+        interact("Staircase", "Climb-up", TILE_OBJECT);
+    }
+    
+    private void sdown()
+    {
+        interact("Staircase", "Climb-up", TILE_OBJECT);
+    }
+    
+    private void block(int ticks)
+    {
+        _instructions.register(() -> _action.block(ticks), 
+                "Blocking next instruction: " + ticks + " ticks";
+    }
+
+    private void debug()
+    {
+        _instructions.register(() -> {
+            log.info("Completed last instruction");
+            return true; },
+            "Debug: Completed last instruction");
+    }
+        
+    private void interact(String name, String action, int type) {
+        switch(type) {
+        case TILE_OBJECT:
+            _instructions.register(() -> 
+                TileObjectInteraction.interact(name, action),
+                "Tile object interaction: " + action + " " + name);
+            break;
+        case INVENTORY:
+            _instructions.register(() -> 
+                InventoryInteraction.useItem(name, action),
+                "Inventory interaction: " + action + " " + name);
+            break;
+        case NPC:
+            _instructions.register(() -> 
+                NPCInteraction.interact(name, action),
+                "NPC interaction: " + action + " " + name);
+            break;
+        case TILE_ITEM:
+            int a = Integer.valueOf(action);
+            _instructions.register(() -> _action.interactTileItem(name, a),
+                    "Tile item interaction: " + action + " " + name);
+            break;
+        default:
+            throw new IllegalArgumentException(
+                "Invalid interaction type: " + type);
+        }
+    }
+    private void interact(int id, String action, int type) {        
+        switch(type) {
+        case TILE_OBJECT:
+            _instructions.register(() -> 
+                TileObjectInteraction.interact(id, action),
+                "Tile object interaction: " + action + " " + id);
+            break;
+        case INVENTORY:
+            _instructions.register(() -> 
+                InventoryInteraction.useItem(id, action),
+                "Inventory interaction: " + action + " " + id);
+            break;
+        case NPC:
+            _instructions.register(() -> 
+                NPCInteraction.interact(id, action),
+                "NPC interaction: " + action + " " + id);
+            break;
+        default:
+            throw new IllegalArgumentException(
+                "Invalid interaction type: " + type);
+        }
+    }
+    
+    /**
+     * Common dialogue helper macros.
+     */
+    private void cont()
+    {
+        _instructions.register(() -> _action.continueDialogue(),
+                "Continue dialogue: 0 times", Optional.empty());
+    }
+
+    private void cshort()
+    {
+        _instructions.register(() -> _action.continueDialogue(),
+                "Continue dialogue: " + shortCont + " times", 
+                Optional.of(shortCont));
+    }
+
+    private void cmed()
+    {
+        _instructions.register(() -> _action.continueDialogue(),
+                "Continue dialogue: " + medCont + " times", 
+                Optional.of(medCont));
+    }
+
+    private void clong()
+    {
+        _instructions.register(() -> _action.continueDialogue(),
+                "Continue dialogue: " + longCont + " times", 
+                Optional.of(longCont));
+    }
+
+    private void dialogue(String str, int choice)
+    {
+        _instructions.register(() -> _action.selectDialogue(str, choice),
+                "Dialogue: " + str + " (" + choice + ")");
+    }
+
+    /**
+     * Local enum for simplifying common calls.
+     * @warning Treated as unsigned int, be careful not to index to 32nd bit!
+     */
+    private final int DEFAULT           = 0;
+    private final int BANK_INVENTORY    = 1;
+    private final int SHOP_INVENTORY    = 1 << 1;
+    private final int PLAYER            = 1 << 2;
+    private final int GE                = 1 << 3;
+    private final int TILE_OBJECT       = 1 << 4;
+    private final int INVENTORY         = 1 << 5;
+    private final int PRAYER            = 1 << 6;
+    private final int BANK              = 1 << 7;
+    private final int SHOP              = 1 << 8;
+    private final int NPC               = 1 << 9;
+    private final int TILE_ITEM         = 1 << 10;
+    
+    /** 
+     * Action field number IDs.
+     * @note To keep Action.interactTileItem() open to other action field number 
+     * IDs, but enumerate common ones.
+     */
+    private final String TAKE = "3";
+
+    /**
+     * Seeded random variables for the registry.
+     */
+    public int minWait;
+    public int shortCont;
+    public int medCont ;
+    public int longCont;
+    public int shortWait; 
+    public int medWait;
+    public int longWait;
+    private Random _rand;
+
+    /*
+     * Plugin Context for the Registry.
+     */
+    private Pathing _pathing;
+    private Instructions _instructions;
+    private Action _action;
+
+}
