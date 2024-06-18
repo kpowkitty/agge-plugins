@@ -1,3 +1,6 @@
 [submodule "extern/PiggyPlugins"]
 	path = extern/PiggyPlugins
 	url = git@github.com:agge3/agge-plugins-tmp.git
+[submodule "lib/EthanVannPlugins"]
+	path = lib/EthanVannPlugins
+	url = git@github.com:Ethan-Vann/EthanVannPlugins.git
