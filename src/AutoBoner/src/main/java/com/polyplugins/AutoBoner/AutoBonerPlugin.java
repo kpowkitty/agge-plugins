@@ -1,0 +1,111 @@
+/**
+ * @file AutoBonerPlugin.java
+ * @class AutoBonerPlugin
+ *
+ * @author agge3
+ * @version 1.0
+ * @since 2024-06-18
+ *
+ * Derived in large part from AutoBoner.
+ * Original source credit goes to EthanApi and PiggyPlugins. The diffs represent 
+ * my contributions as part of Agge Plugins.
+ */
+
+package com.polyplugins.AutoBoner;
+
+
+import com.example.EthanApiPlugin.Collections.Inventory;
+import com.example.EthanApiPlugin.Collections.TileObjects;
+import com.example.EthanApiPlugin.EthanApiPlugin;
+import com.example.InteractionApi.TileObjectInteraction;
+import com.example.Packets.*;
+import com.google.inject.Inject;
+import com.google.inject.Provides;
+import com.piggyplugins.PiggyUtils.API.InventoryUtil;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.*;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.input.KeyManager;
+import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.HotkeyListener;
+
+@PluginDescriptor(
+        name = "<html><font color=\"#73D216\">[A3]</font> AutoBoner</html>",
+        description = "Its an automated boner, it does shit",
+        enabledByDefault = false,
+        tags = {"agge", "plugins"}
+)
+@Slf4j
+public class AutoBonerPlugin extends Plugin {
+    @Inject
+    private Client client;
+    @Inject
+    private AutoBonerConfig config;
+    @Inject
+    private AutoBonerOverlay overlay;
+    @Inject
+    private KeyManager keyManager;
+    @Inject
+    private OverlayManager overlayManager;
+    @Inject
+    private ClientThread clientThread;
+    private boolean started = false;
+    public int timeout = 0;
+
+    @Provides
+    private AutoBonerConfig getConfig(ConfigManager configManager) {
+        return configManager.getConfig(AutoBonerConfig.class);
+    }
+    @Override
+    protected void startUp() throws Exception {
+        keyManager.registerKeyListener(toggle);
+        overlayManager.add(overlay);
+        timeout = 0;
+    }
+
+    @Override
+    protected void shutDown() throws Exception {
+        keyManager.unregisterKeyListener(toggle);
+        overlayManager.remove(overlay);
+        timeout = 0;
+        started = false;
+    }
+
+    @Subscribe
+    private void onGameTick(GameTick event) {
+        if (timeout > 0) {
+            timeout--;
+            return;
+        }
+        if (client.getGameState() != GameState.LOGGED_IN || !started) {
+            return;
+        }
+        Inventory.search().onlyUnnoted().nameContains(config.boneName()).first().ifPresent(bone -> {
+            TileObjects.search().nameContains(config.altarName()).nearestToPlayer().ifPresent(altar -> {
+                MousePackets.queueClickPacket();
+                MousePackets.queueClickPacket();
+                ObjectPackets.queueWidgetOnTileObject(bone, altar);
+            });
+        });
+    }
+
+    private final HotkeyListener toggle = new HotkeyListener(() -> config.toggle()) {
+        @Override
+        public void hotkeyPressed() {
+            toggle();
+        }
+    };
+
+    public void toggle() {
+        if (client.getGameState() != GameState.LOGGED_IN) {
+            return;
+        }
+        started = !started;
+    }
+}
