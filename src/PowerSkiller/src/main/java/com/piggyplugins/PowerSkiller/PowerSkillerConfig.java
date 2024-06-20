@@ -41,6 +41,16 @@ public interface PowerSkillerConfig extends Config {
     }
 
     @ConfigItem(
+            name = "Set Bank",
+            keyName = "setBank",
+            description = "Takes a direct enumerated name, see BankLocation.java",
+            position = -4
+    )
+    default String setBank() {
+        return "";
+    }
+
+    @ConfigItem(
             keyName = "searchNpc",
             name = "Search NPCs (for fishing, etc)",
             description = "For things like fishing spots",
@@ -116,7 +126,6 @@ public interface PowerSkillerConfig extends Config {
         return 3;
     }
 
-
     @Range(
             max = 9
     )
@@ -144,6 +153,7 @@ public interface PowerSkillerConfig extends Config {
     default int dropPerTickTwo() {
         return 3;
     }
+
     @ConfigItem(
             name = "Forestry Tree",
             keyName = "dropItems",

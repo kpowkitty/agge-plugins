@@ -22,7 +22,7 @@ public interface AutoCombatv2Config extends Config {
             position = 1
     )
     default String npcTarget() {
-        return "Hill giant";
+        return "Chicken";
     }
 
     @ConfigItem(
@@ -32,7 +32,7 @@ public interface AutoCombatv2Config extends Config {
             position = 2
     )
     default String loot() {
-        return "Coins,Big bones";
+        return "Bones,Feather";
     }
 
     @ConfigItem(
@@ -56,7 +56,7 @@ public interface AutoCombatv2Config extends Config {
     }
 
     @Range(
-            min = 1,
+            min = 6,
             max = 99
     )
     @ConfigItem(
@@ -66,7 +66,7 @@ public interface AutoCombatv2Config extends Config {
             position = 3
     )
     default int EatAt() {
-        return 50;
+        return 15;
     }
 
     @ConfigItem(
@@ -76,6 +76,91 @@ public interface AutoCombatv2Config extends Config {
             position = 3
     )
     default int tickDelay() {
-        return 0;
+        return (int) (Math.random() * 8); // random between 0-7
+    }
+
+    @ConfigItem(
+            keyName = "buryBones",
+            name = "Bury bones/ashes",
+            description = "Will bury ANY bone/ash in your inventory",
+            position = 4
+    )
+    default boolean buryBones() {
+        return true;
+    }
+
+   @ConfigItem(
+            keyName = "useCombatPotion",
+            name = "Combat potions?",
+            description = "Uses regular or super combat potions",
+            position = 5
+    )
+    default boolean useCombatPotion() {
+        return true;
+    }
+
+    @Range(
+            min = 3,
+            max = 99
+    )
+    @ConfigItem(
+            keyName = "useCombatAt",
+            name = "Use at",
+            description = "What level to use combat potions at",
+            position = 6
+    )
+
+    default int useCombatPotAt() {
+        return 80;
+    }
+
+    @ConfigItem(
+            keyName = "useRangingPotion",
+            name = "Ranging potions?",
+            description = "Uses ranging potions",
+            position = 7
+    )
+    default boolean useRangingPotion() {
+        return false;
+    }
+
+    @Range(
+            min = 3,
+            max = 99
+    )
+    @ConfigItem(
+            keyName = "useRangingPotAt",
+            name = "Use at",
+            description = "What level to use ranging potions at",
+            position = 8
+    )
+
+    default int useRangingPotAt() {
+        return 80;
+    }
+
+    @ConfigItem(
+            keyName = "usePrayerPotion",
+            name = "Prayer potions?",
+            description = "Uses prayer potions",
+            position = 9
+    )
+    default boolean usePrayerPotion() {
+        return true;
+    }
+
+    @Range(
+            min = 6,
+            max = 99
+    )
+    @ConfigItem(
+            keyName = "usePrayerAt",
+            name = "Use at",
+            description = "What level to use prayer potions at, prayer or super restore",
+            position = 10
+    )
+
+    default int usePrayerPotAt() {
+        return 20;
     }
 }

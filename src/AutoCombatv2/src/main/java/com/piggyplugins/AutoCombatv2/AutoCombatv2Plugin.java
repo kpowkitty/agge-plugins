@@ -13,14 +13,17 @@
 
 package com.piggyplugins.AutoCombatv2;
 
-import com.example.EthanApiPlugin.EthanApiPlugin;
-import com.example.Packets.*;
-import com.google.inject.Inject;
-import com.google.inject.Provides;
 import com.piggyplugins.AutoCombatv2.tasks.CheckCombatStatus;
 import com.piggyplugins.AutoCombatv2.tasks.LootItems;
 import com.piggyplugins.AutoCombatv2.tasks.attackNPC;
 import com.piggyplugins.AutoCombatv2.tasks.checkStats;
+import com.piggyplugins.AutoCombatv2.tasks.BuryBones;
+import com.piggyplugins.AutoCombatv2.tasks.UsePotion;
+
+import com.example.EthanApiPlugin.EthanApiPlugin;
+import com.example.Packets.*;
+import com.google.inject.Inject;
+import com.google.inject.Provides;
 import com.piggyplugins.PiggyUtils.API.PlayerUtil;
 import com.piggyplugins.PiggyUtils.strategy.AbstractTask;
 import com.piggyplugins.PiggyUtils.strategy.TaskManager;
@@ -38,8 +41,10 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.HotkeyListener;
-import org.apache.commons.lang3.tuple.Pair;
+import static net.runelite.api.TileItem.OWNERSHIP_SELF;
+import static net.runelite.api.TileItem.OWNERSHIP_GROUP;
 
+import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -68,13 +73,16 @@ public class AutoCombatv2Plugin extends Plugin {
     @Inject
     @Getter
     private ClientThread clientThread;
+
     public boolean started = false;
     public int timeout = 0;
     public TaskManager taskManager = new TaskManager();
     public boolean inCombat;
     public int idleTicks = 0;
+
     @Inject
     PlayerUtil playerUtil;
+
     @Getter
     private Set<String> lootItems = new HashSet<>();
     @Getter
@@ -87,6 +95,9 @@ public class AutoCombatv2Plugin extends Plugin {
 
     @Override
     protected void startUp() throws Exception {
+        // Start when turned on, don't gate behind toggle.
+        started = true;
+
         overlayManager.add(overlay);
         timeout = 0;
         inCombat = false;
@@ -103,7 +114,6 @@ public class AutoCombatv2Plugin extends Plugin {
         keyManager.unregisterKeyListener(toggle);
         overlayManager.remove(overlay);
     }
-
 
     @Subscribe
     private void onGameTick(GameTick event) {
@@ -124,8 +134,10 @@ public class AutoCombatv2Plugin extends Plugin {
         }
 
         log.info("Game tick observed. Queue size before any operation: {}", lootQueue.size());
+
         // Existing logic here
         checkRunEnergy();
+
         if (taskManager.hasTasks()) {
             for (AbstractTask t : taskManager.getTasks()) {
                 if (t.validate()) {
@@ -134,22 +146,40 @@ public class AutoCombatv2Plugin extends Plugin {
                 }
             }
         }
+
         log.info("Game tick processing completed. Queue size after operations: {}", lootQueue.size());
     }
 
     @Subscribe
-    private void onItemSpawned(ItemSpawned event) {
-        TileItem tileItem = event.getItem();
-        Tile tile = event.getTile(); // This is how you get the Tile from the event
+    private void onItemSpawned(ItemSpawned e) {
+        TileItem item = e.getItem();
 
-        if (tileItem != null) {
-            ItemComposition composition = itemManager.getItemComposition(tileItem.getId());
+        // Don't do any of these procedures if we don't own the item.
+        if (item != null &&
+           (item.getOwnership() == OWNERSHIP_SELF ||
+            item.getOwnership() == OWNERSHIP_GROUP)) {
+                
+            // This is how you get the Tile from the event.
+            Tile tile = e.getTile();
+
+            ItemComposition composition = itemManager.getItemComposition(item.getId());
             if (isLootable(composition.getName())) {
-                lootQueue.add(Pair.of(tileItem, tile)); // Store both the TileItem and the Tile
+                lootQueue.add(Pair.of(item, tile)); // Store both the TileItem and the Tile
                 log.info("Loot added: {} at {}", composition.getName(), tile.getWorldLocation());
             }
         }
     }
+
+    ///**
+    // * Get the plugin's loot queue for Tasks.
+    // * @return Queue<Pair<TileItem, Tile>> lootQueue
+    // * The plugin's loot queue.
+    // * @deprecated Lombok does this, but I'm not a fan -- may revisit.
+    // */
+    //public Queue<Pair<TileItem, Tile>> getLootQueue()
+    //{
+    //    return lootQueue;
+    //}
 
     private boolean isLootable(String itemName) {
         return config.loot().contains(itemName);
@@ -183,7 +213,8 @@ public class AutoCombatv2Plugin extends Plugin {
             taskManager.addTask(new LootItems(this, config));
             taskManager.addTask(new CheckCombatStatus(this, config));
             taskManager.addTask(new checkStats(this, config));
-
+            taskManager.addTask(new BuryBones(this, config));
+            taskManager.addTask(new UsePotion(this, config));
         } else {
             taskManager.clearTasks();
         }

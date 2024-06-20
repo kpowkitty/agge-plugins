@@ -40,12 +40,10 @@ public class LootItems extends AbstractTask<AutoCombatv2Plugin, AutoCombatv2Conf
                 if(!Inventory.full()) {
                     MousePackets.queueClickPacket();
                     TileItemPackets.queueTileItemAction(new ETileItem(lootTile.getWorldLocation(), loot), false);
-                    plugin.timeout = 3;
+                    // Why not have the timeout be random?
+                    // Random 3-6, inclusive.
+                    plugin.timeout = 3 + (int) (Math.random() * 4);
                 }
-
-            }
-
         }
-
-
     }
+}

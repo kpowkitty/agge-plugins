@@ -30,7 +30,9 @@ public class checkStats extends AbstractTask<AutoCombatv2Plugin, AutoCombatv2Con
     }
 
     public void consumeFood() {
-        if (plugin.getClient().getBoostedSkillLevel(Skill.HITPOINTS) <= config.EatAt()) {
+        // Random, +-5 hp of config. MAKE SURE TO SET HP LIMIT AT +6.
+        if (plugin.getClient().getBoostedSkillLevel(Skill.HITPOINTS) <= 
+           (config.EatAt() + (((int) (Math.random() * 11)) - 5))) {
             InventoryInteraction.useItem(config.foodToEat(), "Eat");
             log.info("Attempting to consume food for health recovery.");
         } else {

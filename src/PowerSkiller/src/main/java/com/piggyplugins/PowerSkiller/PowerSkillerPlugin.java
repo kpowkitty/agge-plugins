@@ -13,6 +13,9 @@
 
 package com.piggyplugins.PowerSkiller;
 
+import com.piggyplugins.PowerSkiller.BankLocation;
+import com.piggyplugins.PowerSkiller.Pathing;
+
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.EthanApiPlugin.Collections.query.TileObjectQuery;
 import com.example.EthanApiPlugin.EthanApiPlugin;
@@ -20,8 +23,8 @@ import com.example.InteractionApi.BankInventoryInteraction;
 import com.example.InteractionApi.InventoryInteraction;
 import com.example.InteractionApi.NPCInteraction;
 import com.example.InteractionApi.TileObjectInteraction;
-import com.google.inject.Provides;
 import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameTick;
@@ -33,20 +36,22 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.HotkeyListener;
-
-import com.google.inject.Inject;
 import net.runelite.client.util.Text;
+
+import lombok.extern.slf4j.Slf4j;
+import com.google.inject.Provides;
+import com.google.inject.Inject;
 import org.apache.commons.lang3.RandomUtils;
 
 import java.util.*;
 
-
 @PluginDescriptor(
-        name = "<html><font color=\"#FF9DF9\">[PP]</font> Power Skiller</html>",
+        name = "<html><font color=\"#73D216\">[A3]</font> Power Skiller</html>",
         description = "Will interact with an object and drop or bank all items when inventory is full",
         enabledByDefault = false,
-        tags = {"agge", "plugin", "skilling"}
+        tags = {"agge", "piggy", "plugin", "skilling"}
 )
+@Slf4j
 public class PowerSkillerPlugin extends Plugin {
     @Inject
     private Client client;
@@ -65,14 +70,23 @@ public class PowerSkillerPlugin extends Plugin {
 
     boolean bankPin = false;
 
+    private Pathing pathing;
+
     private int timeout;
+    private boolean pathingToBank;
 
     @Override
     protected void startUp() throws Exception {
+        // Start when turned on, don't gate behind toggle.
+        started = true;
+
         bankPin = false;
         breakHandler.registerPlugin(this);
         keyManager.registerKeyListener(toggle);
         this.overlayManager.add(overlay);
+
+        pathing = new Pathing();
+        pathingToBank = false;
     }
 
     @Override
@@ -81,6 +95,9 @@ public class PowerSkillerPlugin extends Plugin {
         breakHandler.unregisterPlugin(this);
         keyManager.unregisterKeyListener(toggle);
         this.overlayManager.remove(overlay);
+
+        pathing = null;
+        pathingToBank = false;
     }
 
     @Provides
@@ -101,6 +118,9 @@ public class PowerSkillerPlugin extends Plugin {
     private void handleState() {
         switch (state) {
             case BANK:
+                log.info("Entering BANK State...");
+
+                log.info("Done pathing to Bank!");
                 if (Widgets.search().withId(13959169).first().isPresent()) {
                     bankPin = true;
                     return;
@@ -120,13 +140,13 @@ public class PowerSkillerPlugin extends Plugin {
                         TileObjectInteraction.interact(tileObject, "Use");
                         return;
                     });
-                    if (TileObjects.search().withAction("Bank").nearestToPlayer().isEmpty() && NPCs.search().withAction("Bank").nearestToPlayer().isEmpty()) {
-                        EthanApiPlugin.sendClientMessage("Bank is not found, move to an area with a bank.");
-                    }
+                    //if (TileObjects.search().withAction("Bank").nearestToPlayer().isEmpty() && NPCs.search().withAction("Bank").nearestToPlayer().isEmpty()) {
+                    //    EthanApiPlugin.sendClientMessage("Bank is not found, move to an area with a bank.");
+                    //}
 
                     return;
-
                 }
+
                 List<Widget> items = BankInventory.search().result();
                 for (Widget item : items) {
                     if (!isTool(item.getName().toLowerCase()) && !shouldKeep(item.getName().toLowerCase())) {
@@ -149,6 +169,42 @@ public class PowerSkillerPlugin extends Plugin {
             case DROP_ITEMS:
                 dropItems();
                 break;
+            case PATHING:
+            // xxx there's more that can be done here, could ++/-- the 
+            // WorldPoint to find a valid WorldPoint (??)
+            // xxx get this work! 
+            // if (EthanApiPlugin.pathToGoal(wp, new HashSet<>()) != null) {
+            
+                pathing.run();
+                if (shouldBank()) {
+                    try {
+                        WorldPoint wp = BankLocation.fromString(config.setBank());
+                        log.info("Valid bank WorldPoint");
+
+                    
+                        pathing.pathTo(wp);
+                        pathing.run();
+                        log.info("Found a path! Pathing...");
+                        if (!pathing.isPathing()) {
+                            // next state
+                            return;
+                        }
+                    } catch (IllegalArgumentException e) {
+                        log.info(e.getMessage());
+                    }
+                } else {
+                    // User can provide a skilling location, optional WorldPoint 
+                    // poll in logs.
+                    WorldPoint wp = new WorldPoint(config.skilling(), 
+                                                   config.skillingY(), 
+                                                   config.skillingZ());
+                    pathing.pathTo(wp);
+                    pathing.run();
+                    if (!pathing.isPathing()) {
+                        // next state
+                        return;
+                }
+                break;
         }
     }
 
@@ -166,6 +222,10 @@ public class PowerSkillerPlugin extends Plugin {
         if (timeout > 0) {
             return State.TIMEOUT;
         }
+        
+        // Need to catch the pathing hook before the banking procedure.
+        if (shouldPath())
+            return State.PATHING;
 
         if (shouldBank() && Inventory.full() || (Bank.isOpen() && !isInventoryReset())) {
             if (shouldBank() && !isInventoryReset()) {
@@ -178,7 +238,6 @@ public class PowerSkillerPlugin extends Plugin {
             // should sit at this state til it's finished.
             return State.DROP_ITEMS;
         }
-
 
         // default it'll look for an object.
         return State.FIND_OBJECT;
@@ -314,10 +373,42 @@ public class PowerSkillerPlugin extends Plugin {
         }
     };
 
+    // xxx incorporate here
+    //if (shouldBank() && Inventory.full() || (Bank.isOpen() && !isInventoryReset())) {
+    //    if (shouldBank() && !isInventoryReset()) {
+    //        return State.BANK;
+    //    }
+    //}
+    
     private boolean shouldBank() {
-        return config.shouldBank() &&
-                (NPCs.search().withAction("Bank").first().isPresent() || TileObjects.search().withAction("Bank").first().isPresent()
-                || TileObjects.search().withAction("Collect").first().isPresent() && !bankPin);
+        if (config.shouldBank() &&
+           (NPCs.search().withAction("Bank").first().isPresent() || 
+            TileObjects.search().withAction("Bank").first().isPresent() ||
+            TileObjects.search().withAction("Collect").first().isPresent() ||
+            !config.setBank().equals("") &&
+            !bankPin)) {
+            //log.info("Should bank!");
+            return true;
+        } else {
+            log.info("Didn't clear bank check, dropping items!");
+            return false;
+        }
+    }
+
+    private boolean shouldPath() {
+        /* @brief Keep track of two potential pathing scenarios and rely on 
+         * deeper up the call stack to know which one. */
+        if (shouldBank() &&
+            TileObjects.search().withAction("Bank").nearestToPlayer().isEmpty() && 
+            NPCs.search().withAction("Bank").nearestToPlayer().isEmpty()) {
+            return true;
+        } else if (!TileObjects.search()
+                               .withName(objectName)
+                               .nearestToPlayer()
+                               .isPresent()) {
+            return true;
+        }
+        return false;
     }
 
     public void toggle() {
@@ -325,9 +416,9 @@ public class PowerSkillerPlugin extends Plugin {
             return;
         }
         started = !started;
-        if(!started){
+        if (!started) {
             breakHandler.stopPlugin(this);
-        }else{
+        } else {
             breakHandler.startPlugin(this);
         }
     }

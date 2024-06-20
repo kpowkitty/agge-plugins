@@ -6,5 +6,6 @@ public enum State {
     DROP_ITEMS,
     MISSING_TOOLS,
     BANK,
+    PATHING,
     TIMEOUT
 }

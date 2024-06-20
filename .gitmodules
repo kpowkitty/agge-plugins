@@ -4,3 +4,6 @@
 [submodule "lib/EthanVannPlugins"]
 	path = lib/EthanVannPlugins
 	url = git@github.com:Ethan-Vann/EthanVannPlugins.git
+[submodule "lib/shortest-path"]
+	path = lib/shortest-path
+	url = git@github.com:agge3/shortest-path.git

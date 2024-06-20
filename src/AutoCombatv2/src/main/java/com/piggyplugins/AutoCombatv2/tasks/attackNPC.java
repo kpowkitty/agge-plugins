@@ -20,19 +20,12 @@ public class attackNPC extends AbstractTask<AutoCombatv2Plugin, AutoCombatv2Conf
 
     @Override
     public boolean validate() {
+        log.info("Entering attack NPC validation...");
         return !plugin.inCombat && plugin.getLootQueue().isEmpty();
     }
 
     @Override
     public void execute() {
-        if (plugin.getClient() == null) {
-            log.error("Client is null");
-            return;
-        }
-        if (plugin.getClient().getNpcs() == null) {
-            log.error("NPC list is null");
-            return;
-        }
         NPC targetNPC = findNPC(config.npcTarget());
         if (targetNPC != null) {
             log.info("Attacking NPC: {}", config.npcTarget());
