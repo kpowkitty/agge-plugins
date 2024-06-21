@@ -12,5 +12,5 @@ OneClickBlackjack/
 release/
 private/
 shared/
-.Trash-1000
-src/cpp/
+.Trash-1000/
+cpp/

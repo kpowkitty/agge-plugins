@@ -15,63 +15,85 @@ import com.aggeplugins.Skiller.State;
 import com.aggeplugins.Skiller.StateID;
 import com.aggeplugins.Skiller.Context;
 import com.aggeplugins.Skiller.StateStack;
-import com.aggeplugins.Skiller.Pathing;
+import com.aggeplugins.Skiller.Util;
 
-import net.runelite.api.coord.WorldPoint;
+import com.example.EthanApiPlugin.Collections.*;
+import com.example.EthanApiPlugin.Collections.query.TileObjectQuery;
+import com.example.EthanApiPlugin.EthanApiPlugin;
+import com.example.InteractionApi.InventoryInteraction;
+import com.example.InteractionApi.NPCInteraction;
+import com.example.InteractionApi.TileObjectInteraction;
+import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+
+import net.runelite.api.*;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.coords.WorldPoint;
+
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class SkillingState implements State {
-    private final StateStack stateStack;
-    private final Context context;
-
+@Slf4j
+public class SkillingState extends State {
     public SkillingState(StateStack stack, Context ctx)
     {
-        this.stack = stack;
-        this.ctx = ctx;
+        super(stack, ctx);
+        init();
+    }
+
+    private void init()
+    {
+        ctx.plugin.currState = "SKILLING";
     }
 
     @Override
     public boolean run()
     {
+        ctx.plugin.currState = "ANIMATING";
+
         // self-explanatory, we just return a State if the conditions are met.
         if (EthanApiPlugin.isMoving() || 
-            client.getLocalPlayer().getAnimation() != -1) {
+            ctx.client.getLocalPlayer().getAnimation() != -1) {
 
-            if (hasTools()) {
+            ctx.plugin.currState = "SKILLING";
+
+            if (Util.hasTools(ctx)) {
                 // xxx timeout
                 
                 // Core action loop:
-                if (config.searchNpc()) {
+                if (ctx.config.searchNpc()) {
                     if (!findNpc())
-                        requestStatePush(PATH);
+                        requestPushState(StateID.PATHING);
                 } else {
                     if (!findObject())
-                        requestStatePush(PATH);
+                        requestPushState(StateID.PATHING);
                 }
 
                 // xxx setTimeout();
 
                 if (Inventory.full()) {
                     if (ctx.config.shouldBank())
-                        requestStatePush(BANK);
+                        requestPushState(StateID.BANKING);
                     else
-                        requestStatePush(DROP);
+                        requestPushState(StateID.DROPPING);
                 }
             }
         }
+
         return false; // keep previous state from running
     }
 
     @Override
-    public boolean handleEvent() {
-        // Implement event handling logic
+    public boolean handleEvent()
+    {
+        return false; // keep previous state from handling events
     }
 
     private boolean findObject() {
         AtomicBoolean found = new AtomicBoolean(false);
-        String objectName = config.objectToInteract();
-        if (config.useForestryTreeNotClosest() && config.expectedAction().equalsIgnoreCase("chop")) {
+        String objectName = ctx.config.objectToInteract();
+        if (ctx.config.useForestryTreeNotClosest() && ctx.config.expectedAction().equalsIgnoreCase("chop")) {
             TileObjects.search().withName(objectName).nearestToPoint(getObjectWMostPlayers()).ifPresent(tileObject -> {
                 ObjectComposition comp = TileObjectQuery.getObjectComposition(tileObject);
                 TileObjectInteraction.interact(tileObject, comp.getActions()[0]);
@@ -91,13 +113,13 @@ public class SkillingState implements State {
     private boolean findNpc() 
     {
         AtomicBoolean found = new AtomicBoolean(false);
-        String npcName = config.objectToInteract();
+        String npcName = ctx.config.objectToInteract();
         NPCs.search().withName(npcName).nearestToPlayer().ifPresent(npc -> {
-            NPCComposition comp = client.getNpcDefinition(npc.getId());
+            NPCComposition comp = ctx.client.getNpcDefinition(npc.getId());
             if (Arrays.stream(comp.getActions())
                     .filter(Objects::nonNull)
-                    .anyMatch(action -> action.equalsIgnoreCase(config.expectedAction()))) {
-                NPCInteraction.interact(npc, config.expectedAction()); // For fishing spots ?
+                    .anyMatch(action -> action.equalsIgnoreCase(ctx.config.expectedAction()))) {
+                NPCInteraction.interact(npc, ctx.config.expectedAction()); // For fishing spots ?
                 found.set(true);
             } else {
                 NPCInteraction.interact(npc, comp.getActions()[0]);
@@ -107,30 +129,6 @@ public class SkillingState implements State {
         return found.get();
     }
 
-    private boolean hasTools() 
-    {
-        //Updated from https://github.com/moneyprinterbrrr/ImpactPlugins/blob/experimental/src/main/java/com/impact/PowerGather/PowerGatherPlugin.java#L196
-        //Big thanks hawkkkkkk
-        String[] tools = config.toolsToUse().split(","); // split the tools listed by comma, no space.
-
-        int numInventoryTools = Inventory.search()
-                .filter(item -> isTool(item.getName())) // filter inventory by using out isTool method
-                .result().size();
-        int numEquippedTools = Equipment.search()
-                .filter(item -> isTool(item.getName())) // filter inventory by using out isTool method
-                .result().size();
-
-        return numInventoryTools + numEquippedTools >= tools.length; // if the size of tools and the filtered inventory is the same, we have our tools.
-    }
-
-    private boolean isTool(String name) 
-    {
-        String[] tools = config.toolsToUse().split(","); // split the tools listed by comma, no space.
-
-        return Arrays.stream(tools) // stream the array using Arrays.stream() from java.util
-                .anyMatch(i -> name.toLowerCase().contains(i.toLowerCase())); // more likely for user error than the shouldKeep option, but we'll follow the same idea as shouldKeep.
-    }
-
     /**
      * Tile w most players on it within 2 tiles of the object we're looking for
      *
@@ -138,7 +136,7 @@ public class SkillingState implements State {
      */
     public WorldPoint getObjectWMostPlayers() 
     {
-        String objectName = config.objectToInteract();
+        String objectName = ctx.config.objectToInteract();
         Map<WorldPoint, Integer> playerCounts = new HashMap<>();
         WorldPoint mostPlayersTile = null;
         int highestCount = 0;
@@ -159,6 +157,6 @@ public class SkillingState implements State {
             }
         }
 
-        return mostPlayersTile == null ? client.getLocalPlayer().getWorldLocation() : mostPlayersTile;
+        return mostPlayersTile == null ? ctx.client.getLocalPlayer().getWorldLocation() : mostPlayersTile;
     }
 }

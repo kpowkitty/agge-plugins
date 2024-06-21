@@ -11,7 +11,7 @@
  * source of code at times.
  */
 
-package com.piggyplugins.PowerSkiller;
+package com.aggeplugins.Skiller;
 
 /* Begin shortest-path. */
 import net.runelite.api.Client;
@@ -113,7 +113,7 @@ public class Pathing {
     SplitFlagMap map = SplitFlagMap.fromResources();
     Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
     PathfinderConfig pathfinderConfig = new PathfinderConfig(
-        map, transports, PowerSkillerPlugin.client);
+        map, transports, SkillerPlugin.client);
 
     //@Inject
     //ClientThread clientThread;
@@ -157,7 +157,7 @@ public class Pathing {
             // Use shortest-path to calculate the path.
             pathfinder = new Pathfinder(
                 pathfinderConfig, 
-                PowerSkillerPlugin.client.getLocalPlayer().getWorldLocation(),
+                SkillerPlugin.client.getLocalPlayer().getWorldLocation(),
                 goal);
             path = pathfinder.getPath();
             fullPath = new ArrayList<>(path);
@@ -194,7 +194,7 @@ public class Pathing {
             // Use shortest-path to calculate the path.
             pathfinder = new Pathfinder(
                 pathfinderConfig, 
-                PowerSkillerPlugin.client.getLocalPlayer().getWorldLocation(),
+                SkillerPlugin.client.getLocalPlayer().getWorldLocation(),
                 goal);
             path = pathfinder.getPath();
             fullPath = new ArrayList<>(path);
@@ -214,8 +214,6 @@ public class Pathing {
 
             return true;
         }
-
-        return false;
     }
 
     public boolean isPathing() 

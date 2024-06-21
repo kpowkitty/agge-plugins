@@ -30,7 +30,7 @@ public abstract class State {
 
     public State(StateStack stack, Context ctx) {
         this.stack = stack;
-        this.context = context;
+        this.ctx = ctx;
     }
 
     protected void requestPushState(StateID stateId) {
@@ -39,10 +39,6 @@ public abstract class State {
 
     protected void requestPopState() {
         stack.popState();
-    }
-
-    protected StateID requestPreviousState() {
-        return stack.getPreviousState();
     }
 
     protected void requestClearStates() {

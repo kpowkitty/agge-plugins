@@ -13,6 +13,8 @@
 
 package com.aggeplugins.Skiller;
 
+import com.aggeplugins.Skiller.SkillerConfig;
+import com.aggeplugins.Skiller.SkillerOverlay;
 import com.aggeplugins.Skiller.State;
 import com.aggeplugins.Skiller.StateID;
 import com.aggeplugins.Skiller.Context;
@@ -67,7 +69,7 @@ public class SkillerPlugin extends Plugin {
     @Inject
     public static Client client;
     @Inject
-    PowerSkillerConfig config;
+    public static SkillerConfig config;
     @Inject
     private KeyManager keyManager;
     @Inject
@@ -75,10 +77,13 @@ public class SkillerPlugin extends Plugin {
     @Inject
     private OverlayManager overlayManager;
     @Inject
-    private PowerSkillerOverlay overlay;
+    private SkillerOverlay overlay;
 
     public boolean started;
+    public String currState = "";
 
+    private StateStack stack;
+    private Context ctx;
     private int timeout;
 
     @Override
@@ -102,18 +107,19 @@ public class SkillerPlugin extends Plugin {
     {
         initClient();
         initInstance();
-        stack.push(SKILLING);
+        registerStates();
+        stack.pushState(StateID.SKILLING);
     }
 
     private void initInstance()
     {
         try {
-            Context ctx = new Context(this, config);
+            ctx = new Context(this, config, client);
         } catch (NullPointerException e) {
             log.info("Unable to initialize plugin context!");
         }
         try {
-            StateStack stack = new StateStack(ctx);
+            stack = new StateStack(ctx);
         } catch (NullPointerException e) {
             log.info("Unable to initialize state stack!");
         }
@@ -128,6 +134,18 @@ public class SkillerPlugin extends Plugin {
         }
     }
 
+    private void registerStates()
+    {
+        stack.registerState(StateID.SKILLING, () -> 
+            new SkillingState(stack, ctx));
+        stack.registerState(StateID.PATHING, () -> 
+            new PathingState(stack, ctx));
+        stack.registerState(StateID.BANKING, () -> 
+            new BankingState(stack, ctx));
+        stack.registerState(StateID.DROPPING, () -> 
+            new DroppingState(stack, ctx));
+    }
+
     @Override
     protected void shutDown() throws Exception {
         breakHandler.unregisterPlugin(this);
@@ -137,8 +155,10 @@ public class SkillerPlugin extends Plugin {
         finalizer();
     }
 
-    private finalizer()
+    private void finalizer()
     {
+        stack.clearStates();
+
         // null the references, clean state
         client = null;
         ctx = null;

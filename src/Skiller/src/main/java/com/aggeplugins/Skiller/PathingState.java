@@ -18,18 +18,25 @@ import com.aggeplugins.Skiller.StateStack;
 import com.aggeplugins.Skiller.Pathing;
 import com.aggeplugins.Skiller.BankLocation;
 
-import net.runelite.api.coord.WorldPoint;
+import com.example.EthanApiPlugin.Collections.*;
+import com.example.EthanApiPlugin.Collections.query.*;
+import com.example.EthanApiPlugin.*;
+import com.example.InteractionApi.*;
+import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+
+import net.runelite.api.*;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.coords.WorldPoint;
+
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
-public class PathingState implements State {
-    private final stack stack;
-    private final Context ctx;
-
+@Slf4j
+public class PathingState extends State {
     public PathingState(StateStack stack, Context ctx) {
-        this.stack = stack;
-        this.ctx = ctx;
-        this.prev = stack.getHistory().removeFirst();
+        super(stack, ctx);
+        this.prev = stack.getHistory().peekFirst();
         this.pathing = new Pathing();
         init();
     }
@@ -40,7 +47,7 @@ public class PathingState implements State {
         pathing.run();
         if (!pathing.isPathing()) {
             finalizer();
-            requestStatePop();
+            requestPopState();
         }
         return false;
     }
@@ -48,7 +55,7 @@ public class PathingState implements State {
     @Override
     public boolean handleEvent() 
     {
-        // Implement event handling logic
+        return false;
     }
 
     /**
@@ -57,13 +64,18 @@ public class PathingState implements State {
      */
     private void init()
     {
+        ctx.plugin.currState = "PATHING";
+
         if (prev == StateID.BANKING) {
             try {
                 goal = BankLocation.fromString(ctx.config.setBank());
-                log.info("Valid bank WorldPoint);
+                log.info("Valid bank WorldPoint");
                 pathing.pathTo(goal);
                 log.info("Found a path! Pathing...");
-        } else if (prev == StateID.SKILLING)
+            } catch (IllegalArgumentException e) {
+                log.info(e.getMessage());
+            }
+        } else if (prev == StateID.SKILLING) {
             try {
                 // User can provide a skilling location, optional WorldPoint 
                 // poll in logs.
@@ -79,7 +91,7 @@ public class PathingState implements State {
         } else {
             log.info("Pathing has no goal! Reverting to previous state...");
             finalizer();
-            requestStatePop();
+            requestPopState();
         }
     }
 

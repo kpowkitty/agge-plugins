@@ -28,7 +28,7 @@ public class StateStack {
 
     private static class PendingChange {
         Action action;
-        States stateId;
+        StateID stateId;
 
         PendingChange(Action action, StateID stateId)
         {
@@ -48,22 +48,39 @@ public class StateStack {
         factories.put(stateId, stateSupplier::get);
     }
 
+    /**
+     * Reverse iterator the StateStack (to operate as a stack). If a State's 
+     * run() method returns false, exit and block all other State's from run() 
+     * -- give the State complete control.
+     */ 
     public void run() 
     {
-        for (State state : stack) {
-            state.run();
-        }
-    }
-
-    public void handleEvent() 
-    {
-        for (State state : stack) {
-            state.handleEvent(event);
+        Iterator<State> it = stack.descendingIterator();
+        while (it.hasNext()) {
+            if (!it.next().run())
+                break;
         }
         applyPendingChanges();
     }
 
-    public void pushState(StateID stateID)
+    /**
+     * Reverse iterator the StateStack (to operate as a stack). If a State's 
+     * handleEvent() method returns false, exit and block all other State's from
+     * handleEvent() -- give the State complete control.
+     * 
+     * @warning Events are not implemented yet!
+     */
+    public void handleEvent() 
+    {
+        Iterator<State> it = stack.descendingIterator();
+        while (it.hasNext()) {
+            if (!it.next().handleEvent())
+                break;
+        }
+        applyPendingChanges();
+    }
+
+    public void pushState(StateID stateId)
     {
         pendingList.add(new PendingChange(Action.PUSH, stateId));
     }
@@ -124,9 +141,9 @@ public class StateStack {
         pendingList.clear();
     }
 
-    private final Deque<State> stack = new ArrayDeque<>();
-    private final Deque<StateID> history = new ArrayDeque<>();
-    private final Deque<PendingChange> pendingList = new ArrayDeque<>();
-    private final Map<States, Supplier<State>> factories = new HashMap<>();
+    private Deque<State> stack = new ArrayDeque<>();
+    private Deque<StateID> history = new ArrayDeque<>();
+    private Deque<PendingChange> pendingList = new ArrayDeque<>();
+    private Map<StateID, Supplier<State>> factories = new HashMap<>();
     private Context ctx;
 }

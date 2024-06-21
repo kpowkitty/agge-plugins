@@ -15,17 +15,34 @@ import com.aggeplugins.Skiller.State;
 import com.aggeplugins.Skiller.StateID;
 import com.aggeplugins.Skiller.Context;
 import com.aggeplugins.Skiller.StateStack;
-import com.aggeplugins.Skiller.Pathing;
+import com.aggeplugins.Skiller.Util;
 
-import net.runelite.api.coord.WorldPoint;
+import com.example.EthanApiPlugin.Collections.*;
+import com.example.EthanApiPlugin.Collections.query.*;
+import com.example.EthanApiPlugin.*;
+import com.example.InteractionApi.*;
+import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+
+import net.runelite.api.*;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.coords.WorldPoint;
+
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class BankingState implements State {
+@Slf4j
+public class BankingState extends State {
     public BankingState(StateStack stack, Context ctx) 
     {
-        this.stack = stack;
-        this.ctx = ctx;
+        super(stack, ctx);
+        init();
+    }
+
+    private void init()
+    {
+        ctx.plugin.currState = "BANKING";
     }
 
     @Override
@@ -34,21 +51,21 @@ public class BankingState implements State {
         log.info("Entering BANK State...");
 
         // xxx deal with bank pin
-        //
+       
         if (canDeposit()) {
             // Bank Widget up, can deposit.
             List<Widget> items = BankInventory.search().result();
                 for (Widget item : items) {
-                    if (!Util.isTool(item.getName().toLowerCase()) && 
-                        !shouldKeep(item.getName().toLowerCase())) {
+                    if (!Util.isTool(item.getName().toLowerCase(), ctx) && 
+                        !Util.shouldKeep(item.getName().toLowerCase(), ctx)) {
                             BankInventoryInteraction.useItem(
                                 item, "Deposit-All");
                     }
                 }
         } else if (!canBank()) {
-            requestStatePush(PATH);
+            requestPushState(StateID.PATHING);
         } else if (!Inventory.full()) {
-            requestStatePop();
+            requestPopState();
         }
         else {
             // do nothing, maybe timeout and state pop to correct
@@ -60,7 +77,7 @@ public class BankingState implements State {
     @Override
     public boolean handleEvent()
     {
-        // Implement event handling logic
+        return false;
     }
 
     private boolean canBank()
@@ -115,6 +132,7 @@ public class BankingState implements State {
             log.info("Unable to continue: Bank pin");
             return true;
         }
+        return false;
     }
     
     private boolean dontBank()

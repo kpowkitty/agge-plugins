@@ -12,6 +12,7 @@
 package com.aggeplugins.Skiller;
 
 public enum StateID {
+    NONE,
     SKILLING,
     PATHING,
     BANKING,

@@ -1,9 +1,9 @@
-package com.piggyplugins.PowerSkiller;
+package com.aggeplugins.Skiller;
 
 import net.runelite.client.config.*;
 
-@ConfigGroup("PowerSkiller")
-public interface PowerSkillerConfig extends Config {
+@ConfigGroup("Skiller")
+public interface SkillerConfig extends Config {
     @ConfigSection(
             name = "Tick Delays",
             description = "Configuration for delays added to skilling activities",

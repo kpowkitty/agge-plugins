@@ -1,4 +1,4 @@
-package com.piggyplugins.PowerSkiller;
+package com.aggeplugins.Skiller;
 
 import com.google.inject.Inject;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -8,25 +8,25 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 
 import java.awt.*;
 
-public class PowerSkillerOverlay extends OverlayPanel {
-
-    private final PowerSkillerPlugin plugin;
-
+public class SkillerOverlay extends OverlayPanel {
     @Inject
-    private PowerSkillerOverlay(PowerSkillerPlugin plugin) {
+    private SkillerOverlay(SkillerPlugin plugin)
+    {
         super(plugin);
         this.plugin = plugin;
         setPosition(OverlayPosition.BOTTOM_LEFT);
         setPreferredSize(new Dimension(160, 160));
     }
 
-
     @Override
-    public Dimension render(Graphics2D graphics) {
+    public Dimension render(Graphics2D graphics)
+    {
+        Color purple = new Color(84, 72, 122);
+
         panelComponent.setPreferredSize(new Dimension(200, 320));
         panelComponent.getChildren().add(TitleComponent.builder()
-                .text("Piggy Power Skiller")
-                .color(new Color(255, 157, 249))
+                .text("Agge Skiller")
+                .color(purple)
                 .build());
         panelComponent.getChildren().add(TitleComponent.builder()
                 .text(plugin.started ? "Running" : "Paused")
@@ -34,20 +34,20 @@ public class PowerSkillerOverlay extends OverlayPanel {
                 .build());
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("State: ")
-                .leftColor(new Color(255, 157, 249))
-                .right(plugin.state==null || !plugin.started ? "STOPPED" : plugin.state.name())
+                .leftColor(purple)
+                .right(!plugin.started ? "STOPPED" : plugin.currState)
                 .rightColor(Color.WHITE)
                 .build());
 
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("Trying to: ")
-                .leftColor(new Color(255, 157, 249))
-                .right(plugin.config.expectedAction() +" " + plugin.config.objectToInteract() )
+                .leftColor(purple)
+                .right(plugin.config.expectedAction() + " " + plugin.config.objectToInteract() )
                 .rightColor(Color.WHITE)
                 .build());
 
-
-
         return super.render(graphics);
     }
+
+    private final SkillerPlugin plugin;
 }

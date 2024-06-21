@@ -43,7 +43,7 @@ dependencies {
     implementation project(path: ':src:HerbCleaner')
     implementation project(path: ':src:ItemCombiner')
     implementation project(path: ':src:ItemDropper')
-    implementation project(path: ':src:PowerSkiller')
+    implementation project(path: ':src:Skiller')
     implementation project(path: ':src:PrayAgainstPlayer')
     implementation project(path: ':src:PrayerFlicker')
     implementation project(path: ':src:ShiftClickWalker')

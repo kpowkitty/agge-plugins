@@ -15,35 +15,48 @@ import com.aggeplugins.Skiller.State;
 import com.aggeplugins.Skiller.StateID;
 import com.aggeplugins.Skiller.Context;
 import com.aggeplugins.Skiller.StateStack;
-import com.aggeplugins.Skiller.Pathing;
+import com.aggeplugins.Skiller.Util;
 
-import net.runelite.api.coord.WorldPoint;
+import com.example.EthanApiPlugin.Collections.*;
+import com.example.EthanApiPlugin.Collections.query.*;
+import com.example.EthanApiPlugin.*;
+import com.example.InteractionApi.*;
+import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+
+import net.runelite.api.*;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.coords.WorldPoint;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomUtils;
 
 import java.util.*;
 
-public class DroppingState implements State {
-    private final StateStack stack;
-    private final Context ctxt;
-
-
+@Slf4j
+public class DroppingState extends State {
     public DroppingState(StateStack stack, Context ctx) 
     {
-        this.stack = state;
-        this.ctx = cxt;
+        super(stack, ctx);
+        init();
+    }
+
+    private void init()
+    {
+        ctx.plugin.currState = "DROPPING";
     }
 
     @Override
     public boolean run() 
     {
         if (!isDropping())
-            requestStatePop();
+            requestPopState();
         return false;
     }
 
     @Override
-    public void handleEvent()
+    public boolean handleEvent()
     {
-        // Implement event handling logic
+        return false;
     }
     
     //if ((isDroppingItems() && !isInventoryReset()) || !shouldBank() && Inventory.full()) {
@@ -52,20 +65,20 @@ public class DroppingState implements State {
     //    return State.DROP_ITEMS;
     //}
 
-    private void isDropping() {
+    private boolean isDropping() {
         // filter the inventory to only get the items we want to drop
         List<Widget> itemsToDrop = Inventory.search()
                                             .filter(item -> 
-            !shouldKeep(item.getName()) && 
-            !isTool(item.getName())).result();
+            !Util.shouldKeep(item.getName(), ctx) && 
+            !Util.isTool(item.getName(), ctx)).result();
 
         for (int i = 0; i < Math.min(itemsToDrop.size(), 
-                            RandomUtils.nextInt(config.dropPerTickOne(), 
-                                                config.dropPerTickTwo())); 
+                            RandomUtils.nextInt(ctx.config.dropPerTickOne(), 
+                                                ctx.config.dropPerTickTwo())); 
              i++) {
             // we'll loop through this at a max of 10 times.  can make this a config options.  drops x items per tick (x = 10 in this example)
             InventoryInteraction.useItem(itemsToDrop.get(i), "Drop");
         }
-        return itemstoDrop != 0; // if not empty, return true
+        return itemsToDrop.size() != 0; // if not empty, return true
     }
 }

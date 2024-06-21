@@ -11,13 +11,17 @@
 
 package com.aggeplugins.Skiller;
 
-public class Context {
-    public PowerSkillerPlugin plugin;
-    public PowerSkillerConfig config;
+import net.runelite.api.Client;
 
-    public Context(PowerSkillerPlugin plugin, PowerSkillerConfig config)
+public class Context {
+    public SkillerPlugin plugin;
+    public SkillerConfig config;
+    public Client client;
+
+    public Context(SkillerPlugin plugin, SkillerConfig config, Client client)
     {
         this.plugin = plugin;
         this.config = config;
+        this.client = client;
     }
 }

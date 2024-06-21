@@ -10,7 +10,7 @@
  *
  */
 
-package com.piggyplugins.PowerSkiller;
+package com.aggeplugins.Skiller;
 
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
