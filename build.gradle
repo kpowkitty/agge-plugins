@@ -31,6 +31,7 @@ allprojects {
 dependencies {
     implementation project(path: ':lib:EthansApi')
     implementation project(path: ':lib:PiggyUtils')
+    implementation project(path: ':lib:shortest-path')
     implementation project(path: ':src:AutoBoner')
     implementation project(path: ':src:AutoCombat')
     implementation project(path: ':src:AutoCombatv2')

@@ -37,6 +37,8 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.Text;
+import net.runelite.api.Client;
+import net.runelite.client.RuneLite;
 
 import lombok.extern.slf4j.Slf4j;
 import com.google.inject.Provides;
@@ -44,6 +46,7 @@ import com.google.inject.Inject;
 import org.apache.commons.lang3.RandomUtils;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @PluginDescriptor(
         name = "<html><font color=\"#73D216\">[A3]</font> Power Skiller</html>",
@@ -54,7 +57,7 @@ import java.util.*;
 @Slf4j
 public class PowerSkillerPlugin extends Plugin {
     @Inject
-    private Client client;
+    public static Client client;
     @Inject
     PowerSkillerConfig config;
     @Inject
@@ -71,12 +74,14 @@ public class PowerSkillerPlugin extends Plugin {
     boolean bankPin = false;
 
     private Pathing pathing;
+    private WorldPoint goal;
 
     private int timeout;
-    private boolean pathingToBank;
 
     @Override
     protected void startUp() throws Exception {
+        initClient();
+
         // Start when turned on, don't gate behind toggle.
         started = true;
 
@@ -86,7 +91,15 @@ public class PowerSkillerPlugin extends Plugin {
         this.overlayManager.add(overlay);
 
         pathing = new Pathing();
-        pathingToBank = false;
+    }
+
+    private void initClient()
+    {   
+        try {
+            client = RuneLite.getInjector().getInstance(Client.class);
+        } catch (NullPointerException e) {
+            log.info("Error: Unable to get client instance variables");
+        }
     }
 
     @Override
@@ -97,7 +110,6 @@ public class PowerSkillerPlugin extends Plugin {
         this.overlayManager.remove(overlay);
 
         pathing = null;
-        pathingToBank = false;
     }
 
     @Provides
@@ -111,16 +123,27 @@ public class PowerSkillerPlugin extends Plugin {
             // We do an early return if the user isn't logged in
             return;
         }
-        state = getNextState();
-        handleState();
+
+        if (config.pollWp()) {
+            log.info("Current WorldPoint: " + 
+                client.getLocalPlayer().getWorldLocation());
+        }
+
+        pathing.run();
+
+        // If a pathing command is executed, then block all states until
+        // finished pathing. Is also done this way because having a pathing 
+        // state introduces stuttering pathing due to scanning states.
+        if (!pathing.isPathing()) {
+            state = getNextState();
+            handleState();
+        }
     }
 
     private void handleState() {
         switch (state) {
             case BANK:
                 log.info("Entering BANK State...");
-
-                log.info("Done pathing to Bank!");
                 if (Widgets.search().withId(13959169).first().isPresent()) {
                     bankPin = true;
                     return;
@@ -140,10 +163,6 @@ public class PowerSkillerPlugin extends Plugin {
                         TileObjectInteraction.interact(tileObject, "Use");
                         return;
                     });
-                    //if (TileObjects.search().withAction("Bank").nearestToPlayer().isEmpty() && NPCs.search().withAction("Bank").nearestToPlayer().isEmpty()) {
-                    //    EthanApiPlugin.sendClientMessage("Bank is not found, move to an area with a bank.");
-                    //}
-
                     return;
                 }
 
@@ -170,41 +189,30 @@ public class PowerSkillerPlugin extends Plugin {
                 dropItems();
                 break;
             case PATHING:
-            // xxx there's more that can be done here, could ++/-- the 
-            // WorldPoint to find a valid WorldPoint (??)
-            // xxx get this work! 
-            // if (EthanApiPlugin.pathToGoal(wp, new HashSet<>()) != null) {
-            
-                pathing.run();
-                if (shouldBank()) {
+                if (shouldBank() && cantBank()) {
                     try {
-                        WorldPoint wp = BankLocation.fromString(config.setBank());
+                        goal = BankLocation.fromString(config.setBank());
                         log.info("Valid bank WorldPoint");
-
-                    
-                        pathing.pathTo(wp);
-                        pathing.run();
+                        pathing.pathTo(goal);
                         log.info("Found a path! Pathing...");
-                        if (!pathing.isPathing()) {
-                            // next state
-                            return;
-                        }
                     } catch (IllegalArgumentException e) {
                         log.info(e.getMessage());
                     }
                 } else {
-                    // User can provide a skilling location, optional WorldPoint 
-                    // poll in logs.
-                    WorldPoint wp = new WorldPoint(config.skilling(), 
-                                                   config.skillingY(), 
-                                                   config.skillingZ());
-                    pathing.pathTo(wp);
-                    pathing.run();
-                    if (!pathing.isPathing()) {
-                        // next state
-                        return;
+                    try {
+                        // User can provide a skilling location, optional 
+                        // WorldPoint poll in logs.
+                        goal = new WorldPoint(config.skillingX(), 
+                                              config.skillingY(), 
+                                              config.skillingZ());
+                        log.info("Valid skilling WorldPoint");
+                        pathing.pathTo(goal);
+                        log.info("Found a path! Pathing...");
+                    } catch (IllegalArgumentException e) {
+                        log.info(e.getMessage());
+                    }
                 }
-                break;
+            break;
         }
     }
 
@@ -223,8 +231,8 @@ public class PowerSkillerPlugin extends Plugin {
             return State.TIMEOUT;
         }
         
-        // Need to catch the pathing hook before the banking procedure.
-        if (shouldPath())
+        // Needs to happen before banking, to avoid an invalid banking state.
+        if (cantBank() || cantSkill())
             return State.PATHING;
 
         if (shouldBank() && Inventory.full() || (Bank.isOpen() && !isInventoryReset())) {
@@ -243,20 +251,24 @@ public class PowerSkillerPlugin extends Plugin {
         return State.FIND_OBJECT;
     }
 
-    private void findObject() {
+    private boolean findObject() {
+        AtomicBoolean found = new AtomicBoolean(false);
         String objectName = config.objectToInteract();
         if (config.useForestryTreeNotClosest() && config.expectedAction().equalsIgnoreCase("chop")) {
             TileObjects.search().withName(objectName).nearestToPoint(getObjectWMostPlayers()).ifPresent(tileObject -> {
                 ObjectComposition comp = TileObjectQuery.getObjectComposition(tileObject);
                 TileObjectInteraction.interact(tileObject, comp.getActions()[0]);
+                found.set(true);
             });
         } else {
             TileObjects.search().withName(objectName).nearestToPlayer().ifPresent(tileObject -> {
                 ObjectComposition comp = TileObjectQuery.getObjectComposition(tileObject);
                 TileObjectInteraction.interact(tileObject, comp.getActions()[0]); // find the object we're looking for.  this specific example will only work if the first Action the object has is the one that interacts with it.
                 // don't *always* do this, you can manually type the possible actions. eg. "Mine", "Chop", "Cook", "Climb".
+                found.set(true);
             });
         }
+        return found.get();
     }
 
     /**
@@ -290,7 +302,8 @@ public class PowerSkillerPlugin extends Plugin {
     }
 
 
-    private void findNpc() {
+    private boolean findNpc() {
+        AtomicBoolean found = new AtomicBoolean(false);
         String npcName = config.objectToInteract();
         NPCs.search().withName(npcName).nearestToPlayer().ifPresent(npc -> {
             NPCComposition comp = client.getNpcDefinition(npc.getId());
@@ -298,11 +311,13 @@ public class PowerSkillerPlugin extends Plugin {
                     .filter(Objects::nonNull)
                     .anyMatch(action -> action.equalsIgnoreCase(config.expectedAction()))) {
                 NPCInteraction.interact(npc, config.expectedAction()); // For fishing spots ?
+                found.set(true);
             } else {
                 NPCInteraction.interact(npc, comp.getActions()[0]);
+                found.set(true);
             }
-
         });
+        return found.get();
     }
 
     private void dropItems() {
@@ -372,21 +387,14 @@ public class PowerSkillerPlugin extends Plugin {
             toggle();
         }
     };
-
-    // xxx incorporate here
-    //if (shouldBank() && Inventory.full() || (Bank.isOpen() && !isInventoryReset())) {
-    //    if (shouldBank() && !isInventoryReset()) {
-    //        return State.BANK;
-    //    }
-    //}
     
     private boolean shouldBank() {
         if (config.shouldBank() &&
+           (!bankPin &&
            (NPCs.search().withAction("Bank").first().isPresent() || 
             TileObjects.search().withAction("Bank").first().isPresent() ||
             TileObjects.search().withAction("Collect").first().isPresent() ||
-            !config.setBank().equals("") &&
-            !bankPin)) {
+            !config.setBank().equals("")))) {
             //log.info("Should bank!");
             return true;
         } else {
@@ -395,20 +403,16 @@ public class PowerSkillerPlugin extends Plugin {
         }
     }
 
-    private boolean shouldPath() {
-        /* @brief Keep track of two potential pathing scenarios and rely on 
-         * deeper up the call stack to know which one. */
-        if (shouldBank() &&
-            TileObjects.search().withAction("Bank").nearestToPlayer().isEmpty() && 
-            NPCs.search().withAction("Bank").nearestToPlayer().isEmpty()) {
-            return true;
-        } else if (!TileObjects.search()
-                               .withName(objectName)
-                               .nearestToPlayer()
-                               .isPresent()) {
-            return true;
-        }
-        return false;
+    private boolean cantBank()
+    {
+        return shouldBank() && Inventory.full() &&
+               TileObjects.search().withAction("Bank").nearestToPlayer().isEmpty() && 
+               NPCs.search().withAction("Bank").nearestToPlayer().isEmpty(); 
+    }
+
+    private boolean cantSkill()
+    {
+        return !findObject() && !findNpc();
     }
 
     public void toggle() {

@@ -41,13 +41,53 @@ public interface PowerSkillerConfig extends Config {
     }
 
     @ConfigItem(
+            name = "Poll Current WorldPoint",
+            keyName = "pollWp",
+            description = "Toggle to display the current WorldPoint in logs",
+            position = -4
+    )
+    default boolean pollWp() {
+        return true;
+    }
+
+    @ConfigItem(
             name = "Set Bank",
             keyName = "setBank",
             description = "Takes a direct enumerated name, see BankLocation.java",
-            position = -4
+            position = -5
     )
     default String setBank() {
         return "";
+    }
+
+    @ConfigItem(
+            name = "Set Skilling x-coordinate",
+            keyName = "skillingX",
+            description = "The target skilling location x-coordinate, poll current WorldPoint to find",
+            position = -6
+    )
+    default int skillingX() {
+        return 0;
+    }
+
+    @ConfigItem(
+            name = "Set Skilling y-coordinate",
+            keyName = "skillingY",
+            description = "The target skilling location y-coordinate, poll current WorldPoint to find",
+            position = -7
+    )
+    default int skillingY() {
+        return 0;
+    }
+
+    @ConfigItem(
+            name = "Set Skilling z-coordinate",
+            keyName = "skillingZ",
+            description = "The target skilling location z-coordinate, poll current WorldPoint to find",
+            position = -8
+    )
+    default int skillingZ() {
+        return 0;
     }
 
     @ConfigItem(

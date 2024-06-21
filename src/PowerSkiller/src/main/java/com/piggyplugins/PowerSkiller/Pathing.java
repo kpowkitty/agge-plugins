@@ -13,6 +13,61 @@
 
 package com.piggyplugins.PowerSkiller;
 
+/* Begin shortest-path. */
+import net.runelite.api.Client;
+import net.runelite.api.KeyCode;
+import net.runelite.api.MenuAction;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.Player;
+import net.runelite.api.Point;
+import net.runelite.api.SpriteID;
+import net.runelite.api.Varbits;
+import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuEntryAdded;
+import net.runelite.api.events.MenuOpened;
+import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.worldmap.WorldMap;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.ui.JagexColors;
+import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
+import net.runelite.client.ui.overlay.worldmap.WorldMapPoint;
+import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
+import net.runelite.client.util.ColorUtil;
+import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.Text;
+import shortestpath.pathfinder.CollisionMap;
+import shortestpath.pathfinder.Pathfinder;
+import shortestpath.pathfinder.PathfinderConfig;
+import shortestpath.pathfinder.SplitFlagMap;
+import shortestpath.*;
+/* End shortest-path. */
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Inject;
+import com.google.inject.Provides;
+import java.awt.Color;
+import java.awt.Polygon;
+import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
+import java.awt.geom.Ellipse2D;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.regex.Pattern;
+/* End shortest-path. */
+
 import com.example.EthanApiPlugin.Collections.TileObjects;
 import com.example.EthanApiPlugin.EthanApiPlugin;
 import com.example.EthanApiPlugin.PathFinding.GlobalCollisionMap;
@@ -25,14 +80,8 @@ import net.runelite.api.Tile;
 import net.runelite.api.WallObject;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.GameTick;
-import net.runelite.client.callback.ClientThread;
-import net.runelite.client.config.ConfigManager;
-import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.plugins.Plugin;
-import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.api.*;
+import net.runelite.client.RuneLite;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
@@ -59,6 +108,12 @@ public class Pathing {
     
     @Inject
     Random rand = new Random();
+
+    Pathfinder pathfinder;
+    SplitFlagMap map = SplitFlagMap.fromResources();
+    Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
+    PathfinderConfig pathfinderConfig = new PathfinderConfig(
+        map, transports, PowerSkillerPlugin.client);
 
     //@Inject
     //ClientThread clientThread;
@@ -98,15 +153,31 @@ public class Pathing {
         try {
             log.info("Path to: " + goal);
             currentPathDestination = null;
-            path = GlobalCollisionMap.findPath(goal);
+
+            // Use shortest-path to calculate the path.
+            pathfinder = new Pathfinder(
+                pathfinderConfig, 
+                PowerSkillerPlugin.client.getLocalPlayer().getWorldLocation(),
+                goal);
+            path = pathfinder.getPath();
             fullPath = new ArrayList<>(path);
+
+            // null the reference after pathfinder has calculated the path.
+            pathfinder = null;
+            
+            //path = GlobalCollisionMap.findPath(goal);
+            //fullPath = new ArrayList<>(path);
+            
             Pathing.goal = goal;
             currentPathDestination = null;
-            if(path == null){
+
+            if (path == null) {
                 return false;
             }
+
             return true;
-        // xxx hack fix for now, just keeping scanning for valid WorldPoint
+
+        // xxx hack fix for now, just keeping scanning for a valid WorldPoint
         } catch (NullPointerException e) {
             log.info("Caught exception with that path!");
             log.info("Repathing to offset...");
@@ -114,21 +185,41 @@ public class Pathing {
             int x = goal.getX();
             int y = goal.getY();
 
-            goal = new WorldPoint(x - 1, y - 1, 0);
+            // xxx only offset x, we'll find one eventually...
+            goal = new WorldPoint(x - 1, y, 0);
             log.info("Path to: " + goal);
+
             currentPathDestination = null;
-            path = GlobalCollisionMap.findPath(goal);
+
+            // Use shortest-path to calculate the path.
+            pathfinder = new Pathfinder(
+                pathfinderConfig, 
+                PowerSkillerPlugin.client.getLocalPlayer().getWorldLocation(),
+                goal);
+            path = pathfinder.getPath();
             fullPath = new ArrayList<>(path);
+
+            // null the reference after pathfinder has calculated the path.
+            pathfinder = null;
+
+            //path = GlobalCollisionMap.findPath(goal);
+            //fullPath = new ArrayList<>(path);
+
             Pathing.goal = goal;
             currentPathDestination = null;
-            if(path == null){
+
+            if (path == null) {
                 return false;
             }
+
             return true;
         }
+
+        return false;
     }
 
-    public boolean isPathing() {
+    public boolean isPathing() 
+    {
         log.info("Is pathing...");
         return goal != null && goal.equals(EthanApiPlugin.playerPosition());
     }
@@ -138,41 +229,11 @@ public class Pathing {
         return true;
     }
 
-//    @Subscribe
-//    private void onConfigChanged(ConfigChanged e) {
-//        if (e.getGroup().equals("PathingTesting") && e.getKey().equals("run")) {
-//            currentPathDestination = null;
-//            path = GlobalCollisionMap.findPath(new WorldPoint(config.x(), config.y(), EthanApiPlugin.getClient().getPlane()));
-//            fullPath = new ArrayList<>(path);
-//            goal = new WorldPoint(config.x(), config.y(), EthanApiPlugin.getClient().getPlane());
-//        }
-//        if (e.getGroup().equals("PathingTesting") && e.getKey().equals("stop")) {
-//            currentPathDestination = null;
-//            path = null;
-//            fullPath = null;
-//            clientThread.invoke(() -> {
-//                TileObjects.search().filter(x -> x instanceof WallObject).withAction("Open").nearestToPlayer().ifPresent(
-//                        tileObject -> {
-////                            WallObject x = (WallObject) tileObject;
-////                            System.out.println(x.getWorldLocation());
-////                            System.out.println("Open A: " + x.getOrientationA());
-////                            System.out.println("Open B: " + x.getOrientationB());
-//                        });
-//                TileObjects.search().filter(x -> x instanceof WallObject).withAction("Close").nearestToPlayer().ifPresent(
-//                        tileObject -> {
-////                            WallObject x = (WallObject) tileObject;
-////                            System.out.println(x.getWorldLocation());
-////                            System.out.println("Close A: " + x.getOrientationA());
-////                            System.out.println("Close B: " + x.getOrientationB());
-//                        });
-//                System.out.println(getTile(EthanApiPlugin.playerPosition()).getWallObject() == null);
-//            });
-//        }
-//    }
-
-    public void run() {
+    public void run() 
+    {
         _ticks++;
-        if(goal!=null&&goal.equals(EthanApiPlugin.playerPosition())){
+
+        if (goal != null && goal.equals(EthanApiPlugin.playerPosition())) {
             log.info("Pathing: Reached goal");
             goal = null;
             path = null;
@@ -180,13 +241,21 @@ public class Pathing {
             _ticks = 0; // Arrived, reset tick counter.
             return;
         }
+
         if (path != null && path.size() >= 1) {
-            if(currentPathDestination !=null&&!currentPathDestination.equals(EthanApiPlugin.playerPosition())&&!EthanApiPlugin.isMoving()){
+            if (currentPathDestination != null && 
+                !currentPathDestination.equals(EthanApiPlugin.playerPosition()) &&
+                !EthanApiPlugin.isMoving()) {
+
                 log.info("stopped walking. clicking destination again");
                 MousePackets.queueClickPacket();
                 MovementPackets.queueMovement(currentPathDestination);
             }
-            if (currentPathDestination == null || currentPathDestination.equals(EthanApiPlugin.playerPosition()) || !EthanApiPlugin.isMoving()) {
+                
+            if (currentPathDestination == null || 
+                currentPathDestination.equals(EthanApiPlugin.playerPosition()) || 
+                !EthanApiPlugin.isMoving()) {
+
                 int step = rand.nextInt((35 - 10) + 1) + 10;
                 int max = step;
                 for (int i = 0; i < step; i++) {
@@ -197,25 +266,34 @@ public class Pathing {
                         }
                     }
                 }
+
                 if (isDoored(EthanApiPlugin.playerPosition(), path.get(0))) {
                     log.info("Door!");
-                    WallObject wallObject = getTile(EthanApiPlugin.playerPosition()).getWallObject();
-                    if(wallObject == null){
+                    WallObject wallObject = getTile(
+                        EthanApiPlugin.playerPosition()).getWallObject();
+
+                    if (wallObject == null) {
                         wallObject = getTile(path.get(0)).getWallObject();
                     }
-                    ObjectPackets.queueObjectAction(wallObject,false,"Open","Close");
+
+                    ObjectPackets.queueObjectAction(
+                        wallObject, false, "Open", "Close");
                     return;
                 }
+
                 step = Math.min(max, path.size() - 1);
                 currentPathDestination = path.get(step);
-                if (path.indexOf(currentPathDestination) == path.size() - 1) {
+
+                if (path.indexOf(currentPathDestination) == (path.size() - 1)) {
                     path = null;
                 } else {
                     path = path.subList(step + 1, path.size());
                 }
+
                 if (currentPathDestination.equals(EthanApiPlugin.playerPosition())) {
                     return;
                 }
+
                 log.info("Pathing: Taking a step");
                 MousePackets.queueClickPacket();
                 MovementPackets.queueMovement(currentPathDestination);

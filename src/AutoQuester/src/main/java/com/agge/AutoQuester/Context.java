@@ -1,6 +1,6 @@
 /**
- * @file Registry.java
- * @class Registry
+ * @file Context.java
+ * @class Context
  * Context struct for passing around context.
  *
  * @author agge3
