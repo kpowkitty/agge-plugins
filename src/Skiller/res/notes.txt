@@ -1,0 +1,2 @@
+* Make StateStack and State take a template class to dynamically handle
+  different events, based on state.
