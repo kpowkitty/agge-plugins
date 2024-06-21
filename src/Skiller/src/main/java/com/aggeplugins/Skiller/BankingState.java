@@ -1,3 +1,26 @@
+/**
+ * @file BankingState.java
+ * @class BankingState
+ * Banking state.
+ *
+ * @author agge3
+ * @version 1.0
+ * @since 2024-06-20
+ *
+ */
+
+package com.aggeplugins.Skiller;
+
+import com.aggeplugins.Skiller.State;
+import com.aggeplugins.Skiller.StateID;
+import com.aggeplugins.Skiller.Context;
+import com.aggeplugins.Skiller.StateStack;
+import com.aggeplugins.Skiller.Pathing;
+
+import net.runelite.api.coord.WorldPoint;
+
+import java.util.*;
+
 public class BankingState implements State {
     public BankingState(StateStack stack, Context ctx) 
     {
