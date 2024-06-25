@@ -1,5 +1,7 @@
 package com.aggeplugins.Skiller;
 
+import com.aggeplugins.Skiller.Context;
+
 import com.google.inject.Inject;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;

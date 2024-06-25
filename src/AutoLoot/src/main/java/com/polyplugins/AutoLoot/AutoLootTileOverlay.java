@@ -1,6 +1,6 @@
 /**
- * @file AutoLootPlugin.java
- * @class AutoLootPlugin
+ * @file AutoLootTileOverlay.java
+ * @class AutoLootTileOverlay
  * Tile overlay - Modular looting automation. 
  *
  * @author agge3

@@ -28,6 +28,7 @@ import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
 import net.runelite.api.*;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.coords.WorldArea;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,6 +43,15 @@ public class SkillingState extends State {
         init();
     }
 
+    /**
+     * Public override to set the max distance to look for skilling objects 
+     * from outside the state.
+     */
+    public void setMaxDistance(int max)
+    {
+        MAX_DISTANCE = max;
+    }
+
     private void init()
     {
         ctx.plugin.currState = "SKILLING";
@@ -50,12 +60,12 @@ public class SkillingState extends State {
     @Override
     public boolean run()
     {
-        ctx.plugin.currState = "ANIMATING";
-
-        // self-explanatory, we just return a State if the conditions are met.
+        // Make sure the player isn't moving or in an animation before skilling,
+        // otherwise animating.
         if (EthanApiPlugin.isMoving() || 
             ctx.client.getLocalPlayer().getAnimation() != -1) {
-
+            ctx.plugin.currState = "ANIMATING";
+        } else {
             ctx.plugin.currState = "SKILLING";
 
             if (Util.hasTools(ctx)) {
@@ -80,6 +90,8 @@ public class SkillingState extends State {
                 }
             }
         }
+        
+        //log.info("In skilling state");
 
         return false; // keep previous state from running
     }
@@ -92,39 +104,69 @@ public class SkillingState extends State {
 
     private boolean findObject() {
         AtomicBoolean found = new AtomicBoolean(false);
-        String objectName = ctx.config.objectToInteract();
-        if (ctx.config.useForestryTreeNotClosest() && ctx.config.expectedAction().equalsIgnoreCase("chop")) {
-            TileObjects.search().withName(objectName).nearestToPoint(getObjectWMostPlayers()).ifPresent(tileObject -> {
-                ObjectComposition comp = TileObjectQuery.getObjectComposition(tileObject);
-                TileObjectInteraction.interact(tileObject, comp.getActions()[0]);
+
+        if (ctx.config.useForestryTreeNotClosest() && 
+            ctx.config.expectedAction().equalsIgnoreCase("chop")) {
+            
+            TileObjects.search()
+                       .nameContains(
+                            ctx.config.objectToInteract())
+                       .withinDistance(MAX_DISTANCE)
+                       .nearestToPoint(getObjectWMostPlayers())
+                       .ifPresent(to -> {
                 found.set(true);
+                ctx.plugin.currState = "Found forestry tree";
+                log.info("Forestry tree found");
+                ObjectComposition comp = 
+                    TileObjectQuery.getObjectComposition(to);
+                TileObjectInteraction.interact(to, comp.getActions()[0]);
             });
         } else {
-            TileObjects.search().withName(objectName).nearestToPlayer().ifPresent(tileObject -> {
-                ObjectComposition comp = TileObjectQuery.getObjectComposition(tileObject);
-                TileObjectInteraction.interact(tileObject, comp.getActions()[0]); // find the object we're looking for.  this specific example will only work if the first Action the object has is the one that interacts with it.
-                // don't *always* do this, you can manually type the possible actions. eg. "Mine", "Chop", "Cook", "Climb".
+            // Should consistently grab the nearest TileObject to where the 
+            // player's currently standing.
+            TileObjects.search()
+                       .nameContains(
+                            ctx.config.objectToInteract())
+                       .withAction(
+                            ctx.config.expectedAction())
+                       .withinDistance(MAX_DISTANCE)
+                       .nearestToPoint(
+                            ctx.client.getLocalPlayer()
+                                      .getWorldLocation())
+                       .ifPresent(to -> {
                 found.set(true);
+                ctx.plugin.currState = "Found skilling object";
+                log.info("Skilling object found");
+                TileObjectInteraction.interact(to, ctx.config.expectedAction());
             });
         }
         return found.get();
     }
 
+    /**
+     * @note Useful for fishing spots.
+     */
     private boolean findNpc() 
     {
         AtomicBoolean found = new AtomicBoolean(false);
-        String npcName = ctx.config.objectToInteract();
-        NPCs.search().withName(npcName).nearestToPlayer().ifPresent(npc -> {
-            NPCComposition comp = ctx.client.getNpcDefinition(npc.getId());
-            if (Arrays.stream(comp.getActions())
-                    .filter(Objects::nonNull)
-                    .anyMatch(action -> action.equalsIgnoreCase(ctx.config.expectedAction()))) {
-                NPCInteraction.interact(npc, ctx.config.expectedAction()); // For fishing spots ?
+        // Should consistently grab the nearest NPC to where the player's 
+        // currently standing.
+        NPCs.search()
+            .nameContains(
+                ctx.config.objectToInteract())
+            .withAction(
+                ctx.config.expectedAction())
+            .withinWorldArea(new WorldArea(ctx.client.getLocalPlayer()
+                                                     .getWorldLocation(),
+                                           MAX_DISTANCE, MAX_DISTANCE))
+            .nearestToPoint(
+                ctx.client.getLocalPlayer()
+                          .getWorldLocation())
+            .ifPresent(npc -> {
                 found.set(true);
-            } else {
-                NPCInteraction.interact(npc, comp.getActions()[0]);
-                found.set(true);
-            }
+                ctx.plugin.currState = "Found skilling NPC";
+                //log.info("Found skilling NPC at ");
+                NPCInteraction.interact(npc, ctx.config.expectedAction()); 
         });
         return found.get();
     }
@@ -159,4 +201,10 @@ public class SkillingState extends State {
 
         return mostPlayersTile == null ? ctx.client.getLocalPlayer().getWorldLocation() : mostPlayersTile;
     }
+
+    /**
+     * Magic number constant that ensures the player doesn't try to skill from
+     * too far away, and properly enters the pathing state.
+     */
+    private int MAX_DISTANCE = 10;
 }

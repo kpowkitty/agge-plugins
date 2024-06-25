@@ -16,14 +16,17 @@ import com.aggeplugins.Skiller.StateID;
 import com.aggeplugins.Skiller.Context;
 import com.aggeplugins.Skiller.StateStack;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.*;
 import java.util.function.Supplier;
 
+@Slf4j
 public class StateStack {
     public enum Action {
         PUSH,
         POP,
-        CLEAR
+        CLEAR;
     }
 
     private static class PendingChange {
@@ -55,6 +58,7 @@ public class StateStack {
      */ 
     public void run() 
     {
+        //log.info("Running StateStack");
         Iterator<State> it = stack.descendingIterator();
         while (it.hasNext()) {
             if (!it.next().run())
@@ -72,6 +76,7 @@ public class StateStack {
      */
     public void handleEvent() 
     {
+        //log.info("Handling event in StateStack");
         Iterator<State> it = stack.descendingIterator();
         while (it.hasNext()) {
             if (!it.next().handleEvent())
@@ -125,16 +130,19 @@ public class StateStack {
         for (PendingChange change : pendingList) {
             switch (change.action) {
                 case PUSH:
-                    stack.addFirst(createState(change.stateId));
-                    history.addFirst(change.stateId);
+                    stack.addLast(createState(change.stateId));
+                    history.addLast(change.stateId);
+                    log.info("StateStack: Pushed " + change.stateId);
                     break;
                 case POP:
-                    stack.removeFirst();
-                    history.removeFirst();
+                    stack.removeLast();
+                    history.removeLast();
+                    log.info("StateStack: Popped state");
                     break;
                 case CLEAR:
                     stack.clear();
                     history.clear();
+                    log.info("StateStack: Cleared stack");
                     break;
             }
         }

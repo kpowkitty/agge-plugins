@@ -64,7 +64,7 @@ public interface SkillerConfig extends Config {
             name = "Set Skilling x-coordinate",
             keyName = "skillingX",
             description = "The target skilling location x-coordinate, poll current WorldPoint to find",
-            position = -6
+            position = -8
     )
     default int skillingX() {
         return 0;
@@ -84,7 +84,7 @@ public interface SkillerConfig extends Config {
             name = "Set Skilling z-coordinate",
             keyName = "skillingZ",
             description = "The target skilling location z-coordinate, poll current WorldPoint to find",
-            position = -8
+            position = -6
     )
     default int skillingZ() {
         return 0;

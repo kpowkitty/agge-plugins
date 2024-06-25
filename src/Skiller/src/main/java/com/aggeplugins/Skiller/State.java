@@ -16,8 +16,11 @@ import com.aggeplugins.Skiller.StateID;
 import com.aggeplugins.Skiller.Context;
 import com.aggeplugins.Skiller.StateStack;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.*;
 
+@Slf4j
 public abstract class State {
     /**
      * All virtual methods are boolean, so States can block other States.
@@ -33,11 +36,15 @@ public abstract class State {
         this.ctx = ctx;
     }
 
-    protected void requestPushState(StateID stateId) {
+    protected void requestPushState(StateID stateId) 
+    {
+        log.info("Requesting push state: " + stateId);
         stack.pushState(stateId);
     }
 
-    protected void requestPopState() {
+    protected void requestPopState() 
+    {
+        log.info("Requesting pop state");
         stack.popState();
     }
 

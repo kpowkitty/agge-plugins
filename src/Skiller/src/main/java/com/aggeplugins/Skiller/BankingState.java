@@ -26,6 +26,7 @@ import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
 import net.runelite.api.*;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.coords.WorldArea;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -40,6 +41,15 @@ public class BankingState extends State {
         init();
     }
 
+    /**
+     * Public override to set the max distance to look for banking objects from 
+     * outside the state.
+     */
+    public void setMaxDistance(int max)
+    {
+        MAX_DISTANCE = max;
+    }
+
     private void init()
     {
         ctx.plugin.currState = "BANKING";
@@ -48,12 +58,13 @@ public class BankingState extends State {
     @Override
     public boolean run() 
     {
-        log.info("Entering BANK State...");
+        log.info("In banking state");
 
         // xxx deal with bank pin
        
         if (canDeposit()) {
             // Bank Widget up, can deposit.
+            log.info("Can deposit items");
             List<Widget> items = BankInventory.search().result();
                 for (Widget item : items) {
                     if (!Util.isTool(item.getName().toLowerCase(), ctx) && 
@@ -62,12 +73,16 @@ public class BankingState extends State {
                                 item, "Deposit-All");
                     }
                 }
+            requestPopState();
         } else if (!canBank()) {
+            log.info("Cannot bank, pushing Pathing state");
             requestPushState(StateID.PATHING);
         } else if (!Inventory.full()) {
+            log.info("Inventory not full, popping state");
             requestPopState();
         }
         else {
+            log.info("No action taken");
             // do nothing, maybe timeout and state pop to correct
         }
 
@@ -85,22 +100,30 @@ public class BankingState extends State {
         AtomicBoolean found = new AtomicBoolean(false);
         TileObjects.search()
                    .withAction("Bank")
+                   .withinDistance(MAX_DISTANCE)
                    .nearestToPlayer()
-                   .ifPresent(tileObject -> {
+                   .ifPresent(to -> {
                 found.set(true);
-                TileObjectInteraction.interact(tileObject, "Bank");
+                log.info("Bank found");
+                TileObjectInteraction.interact(to, "Bank");
         });
         TileObjects.search()
                    .withName("Bank chest")
+                   .withinDistance(MAX_DISTANCE)
                    .nearestToPlayer()
-                   .ifPresent(tileObject -> {
+                   .ifPresent(to -> {
                 found.set(true);
-                TileObjectInteraction.interact(tileObject, "Use");
+                log.info("Bank chest found");
+                TileObjectInteraction.interact(to, "Use");
         });
         NPCs.search()
             .withAction("Bank")
+            .withinWorldArea(new WorldArea(ctx.client.getLocalPlayer()
+                                                     .getWorldLocation(),
+                                           MAX_DISTANCE, MAX_DISTANCE))
             .nearestToPlayer()
             .ifPresent(npc -> {
+                log.info("Bank NPC found");
                 found.set(true);
                 NPCInteraction.interact(npc, "Bank");
         }); 
@@ -151,4 +174,10 @@ public class BankingState extends State {
                    .nearestToPlayer()
                    .isEmpty(); 
     }
+
+    /**
+     * Magic number constant that ensures the player doesn't try to skill from
+     * too far away, and properly enters the pathing state.
+     */
+    private int MAX_DISTANCE = 5;
 }

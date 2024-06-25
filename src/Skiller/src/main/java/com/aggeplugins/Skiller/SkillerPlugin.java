@@ -13,18 +13,8 @@
 
 package com.aggeplugins.Skiller;
 
-import com.aggeplugins.Skiller.SkillerConfig;
-import com.aggeplugins.Skiller.SkillerOverlay;
-import com.aggeplugins.Skiller.State;
-import com.aggeplugins.Skiller.StateID;
-import com.aggeplugins.Skiller.Context;
-import com.aggeplugins.Skiller.StateStack;
-import com.aggeplugins.Skiller.Pathing;
-import com.aggeplugins.Skiller.BankLocation;
-import com.aggeplugins.Skiller.SkillingState;
-import com.aggeplugins.Skiller.PathingState;
-import com.aggeplugins.Skiller.BankingState;
-import com.aggeplugins.Skiller.DroppingState;
+import com.aggeplugins.Skiller.*;
+import com.aggeplugins.MessageBus.*;
 
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.EthanApiPlugin.Collections.query.TileObjectQuery;
@@ -34,6 +24,8 @@ import com.example.InteractionApi.InventoryInteraction;
 import com.example.InteractionApi.NPCInteraction;
 import com.example.InteractionApi.TileObjectInteraction;
 import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+//import shortestpath.ShortestPathPlugin;
+//import static shortestpath.ShortestPathPlugin.getPathfinder;
 
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
@@ -49,7 +41,9 @@ import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.Text;
 import net.runelite.api.Client;
 import net.runelite.client.RuneLite;
+import net.runelite.client.callback.ClientThread;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import com.google.inject.Provides;
 import com.google.inject.Inject;
@@ -66,25 +60,34 @@ import java.util.concurrent.atomic.AtomicBoolean;
 )
 @Slf4j
 public class SkillerPlugin extends Plugin {
+    // RuneLite injections.
     @Inject
-    public static Client client;
+    private static Client client;
+    @Getter
     @Inject
-    public static SkillerConfig config;
+    public ClientThread clientThread;
     @Inject
     private KeyManager keyManager;
     @Inject
     private ReflectBreakHandler breakHandler;
     @Inject
     private OverlayManager overlayManager;
+
+    // Lastly, inject RuneLite-expected plugin interfaces as a co-dependency.
     @Inject
-    private SkillerOverlay overlay;
+    public SkillerConfig config;
+    @Inject
+    public SkillerOverlay overlay;
 
-    public boolean started;
-    public String currState = "";
-
+    // Context handles all domain-specific plugin context from here.
     private StateStack stack;
     private Context ctx;
     private int timeout;
+    private MessageBus messageBus;
+    private Message<String, Boolean> msg;
+
+    public boolean started;
+    public String currState = "";
 
     @Override
     protected void startUp() throws Exception {
@@ -108,13 +111,16 @@ public class SkillerPlugin extends Plugin {
         initClient();
         initInstance();
         registerStates();
+
         stack.pushState(StateID.SKILLING);
+        messageBus = messageBus.instance();
+        messageBus.instance();
     }
 
     private void initInstance()
     {
         try {
-            ctx = new Context(this, config, client);
+            ctx = new Context(this, config, client, clientThread);
         } catch (NullPointerException e) {
             log.info("Unable to initialize plugin context!");
         }
@@ -136,14 +142,31 @@ public class SkillerPlugin extends Plugin {
 
     private void registerStates()
     {
-        stack.registerState(StateID.SKILLING, () -> 
-            new SkillingState(stack, ctx));
-        stack.registerState(StateID.PATHING, () -> 
-            new PathingState(stack, ctx));
-        stack.registerState(StateID.BANKING, () -> 
+        try {
+            stack.registerState(StateID.SKILLING, () -> 
+                new SkillingState(stack, ctx));
+        } catch (NullPointerException e) {
+            log.info("Error: Enable to register skilling state!");
+        }
+        try {
+            stack.registerState(StateID.PATHING, () -> 
+                new PathingState(stack, ctx));
+        } catch (NullPointerException e) {
+            log.info("Error: Enable to register pathing state!");
+        }
+        try {
+            stack.registerState(StateID.BANKING, () -> 
             new BankingState(stack, ctx));
-        stack.registerState(StateID.DROPPING, () -> 
-            new DroppingState(stack, ctx));
+
+        } catch (NullPointerException e) {
+            log.info("Error: Enable to register banking state!");
+        }
+        try {
+            stack.registerState(StateID.DROPPING, () -> 
+                new DroppingState(stack, ctx));
+        } catch (NullPointerException e) {
+            log.info("Error: Enable to register dropping state!");
+        }
     }
 
     @Override
@@ -152,17 +175,19 @@ public class SkillerPlugin extends Plugin {
         keyManager.unregisterKeyListener(toggle);
         this.overlayManager.remove(overlay);
 
-        finalizer();
+        this.finalizer();
     }
 
     private void finalizer()
     {
-        stack.clearStates();
+        if (stack != null)
+            stack.clearStates();
 
         // null the references, clean state
         client = null;
         ctx = null;
         stack = null;
+        messageBus = null;
     }
 
     @Provides
@@ -173,20 +198,30 @@ public class SkillerPlugin extends Plugin {
     @Subscribe
     private void onGameTick(GameTick event) {
         if (!EthanApiPlugin.loggedIn() || 
-            !started || 
-            breakHandler.isBreakActive(this)) {
+            !started) {
+            //breakHandler.isBreakActive(this)) {
 
             // We do an early return if the user isn't logged in
             return;
         }
 
-        stack.run();
-
-        // (If polling) Poll after to avoid any lag for running the states.
+        // For current WorldPoint polling (to find skilling location 
+        // WorldPoint(s)).
         if (config.pollWp()) {
             log.info("Current WorldPoint: " + 
                 client.getLocalPlayer().getWorldLocation());
         }
+
+        // Uncomment to debug ShortestPath outside of StateStack.
+        //if (ShortestPathPlugin.getPathfinder() != null) {
+        //    if (ShortestPathPlugin.getPathfinder().isDone()) {
+        //        log.info("Shortest path working!");
+        //        log.info("Size: " + ShortestPathPlugin.getPathfinder().getPath().size());
+        //    }
+        //}
+
+        // Let states control everything else.
+        stack.run();
     }
 
     private void setTimeout() {

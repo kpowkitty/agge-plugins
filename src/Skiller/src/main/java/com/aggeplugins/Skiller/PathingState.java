@@ -36,18 +36,19 @@ import java.util.*;
 public class PathingState extends State {
     public PathingState(StateStack stack, Context ctx) {
         super(stack, ctx);
-        this.prev = stack.getHistory().peekFirst();
-        this.pathing = new Pathing();
+        this.prev = stack.getHistory().peekLast();
+        this.pathing = new Pathing(ctx);
         init();
     }
 
     @Override
     public boolean run()
     {
-        pathing.run();
-        if (!pathing.isPathing()) {
-            finalizer();
-            requestPopState();
+        if (!pathing.calculatingPath()) {
+            if (!pathing.run()) {
+                this.finalizer();
+                requestPopState();
+            }
         }
         return false;
     }
@@ -55,38 +56,64 @@ public class PathingState extends State {
     @Override
     public boolean handleEvent() 
     {
-        return false;
+        return false;  
     }
 
-    /**
-     * Initialization procedure for PathingState. Validates and prepares to
-     * path, or handles an invalid state.
-     */
-    private void init()
-    {
-        ctx.plugin.currState = "PATHING";
-
+    private void setGoal()
+    {   
         if (prev == StateID.BANKING) {
             try {
                 goal = BankLocation.fromString(ctx.config.setBank());
-                log.info("Valid bank WorldPoint");
-                pathing.pathTo(goal);
-                log.info("Found a path! Pathing...");
             } catch (IllegalArgumentException e) {
                 log.info(e.getMessage());
             }
         } else if (prev == StateID.SKILLING) {
+            goal = new WorldPoint(ctx.config.skillingX(), 
+                                  ctx.config.skillingY(),
+                                  ctx.config.skillingZ());
+        } else {
+            log.info("Pathing has no goal! Reverting to previous state...");
+            finalizer();
+            requestPopState();
+        }
+    }
+
+    /**
+     * @warning Was breaking pathing a lot. Maybe a revisit!
+     */
+    private void setRandGoal()
+    {
+       if (prev == StateID.BANKING) {
             try {
-                // User can provide a skilling location, optional WorldPoint 
-                // poll in logs.
+                goal = BankLocation.fromString(ctx.config.setBank());
+            } catch (IllegalArgumentException e) {
+                log.info(e.getMessage());
+            }
+            // Try a +-5 random offset, for inconsistency.
+            try {
+                goal = new WorldPoint(
+                    goal.getX() + (int) ((Math.random() * 11) - 5),
+                    goal.getY() + (int) ((Math.random() * 11) - 5),
+                    goal.getPlane());
+            } catch (NullPointerException e) {
+                log.info(
+                    "Attempt at random offset failed. Using original goal");
+            }
+        } else if (prev == StateID.SKILLING) {
+        // User can provide a skilling location, optional WorldPoint poll in 
+        // logs.
+            try {
+            // Try a +-5 random offset, for inconsistency.
+                goal = new WorldPoint(
+                    ctx.config.skillingX() + (int) ((Math.random() * 11) - 5),
+                    ctx.config.skillingY() + (int) ((Math.random() * 11) - 5),
+                    ctx.config.skillingZ());
+            } catch (IllegalArgumentException e) {
+                log.info(
+                    "Attempt at random offset failed. Using original goal");
                 goal = new WorldPoint(ctx.config.skillingX(), 
                                       ctx.config.skillingY(),
                                       ctx.config.skillingZ());
-                log.info("Valid skilling WorldPoint");
-                pathing.pathTo(goal);
-                log.info("Found a path! Pathing...");
-            } catch (IllegalArgumentException e) {
-                log.info(e.getMessage());
             }
         } else {
             log.info("Pathing has no goal! Reverting to previous state...");
@@ -96,12 +123,26 @@ public class PathingState extends State {
     }
 
     /**
+     * Initialization procedure for PathingState. Validates and prepares to
+     * path, or handles an invalid state.
+     */
+    private void init()
+    {
+        this.setGoal();
+        pathing.setType(Pathing.Type.SHORTEST_PATH);
+        pathing.setGoal(goal);
+        pathing.setPath();
+        ctx.plugin.currState = "PATHING";
+    }
+
+    /**
     * Finalizer procedure for PathingState. Make sure to call!
     * @remark PathingState DOES have a finalizer procedure (force clean state
     * and null references).
     */
     private void finalizer()
     {
+        prev = null;
         pathing = null;
         goal = null;
     }

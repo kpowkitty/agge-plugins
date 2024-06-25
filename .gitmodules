@@ -7,3 +7,6 @@
 [submodule "lib/shortest-path"]
 	path = lib/shortest-path
 	url = git@github.com:agge3/shortest-path.git
+[submodule "shortest-path"]
+	path = shortest-path
+	url = git@github.com:agge3/shortest-path.git

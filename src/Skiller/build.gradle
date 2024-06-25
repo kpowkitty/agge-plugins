@@ -5,7 +5,8 @@ plugins {
 dependencies {
     compileOnly project(":lib:EthansApi")
     compileOnly project(":lib:PiggyUtils")
-    compileOnly project(":lib:shortest-path")
+    compileOnly project(":shortest-path")
+    compileOnly project(":src:MessageBus")
 }
 
 sourceSets {
