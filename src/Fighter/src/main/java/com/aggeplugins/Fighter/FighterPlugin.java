@@ -7,7 +7,7 @@
  * @since 2024-06-18
  *
  * Derived in large part from Fighter.
- * Original source credit goes to EthanApi and PiggyPlugins. The diffs represent 
+ * Original source credit goes to EthanApi and PiggyPlugins. The diffs represent
  * my contributions as part of Agge Plugins.
  */
 
@@ -17,6 +17,7 @@ import com.aggeplugins.Fighter.tasks.*;
 
 import com.example.EthanApiPlugin.EthanApiPlugin;
 import com.example.Packets.*;
+import static com.example.EthanApiPlugin.EthanApiPlugin.stopPlugin;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.piggyplugins.PiggyUtils.API.PlayerUtil;
@@ -39,6 +40,7 @@ import net.runelite.client.util.HotkeyListener;
 import static net.runelite.api.TileItem.OWNERSHIP_SELF;
 import static net.runelite.api.TileItem.OWNERSHIP_GROUP;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.events.GameStateChanged;
 
 import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;
