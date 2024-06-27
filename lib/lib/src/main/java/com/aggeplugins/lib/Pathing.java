@@ -89,7 +89,7 @@ public class Pathing {
                 if (messageBus.query(MessageID.SEND_PATH)) {
                     msg = (Message<MessageID, List<WorldPoint>>)
                         messageBus.recieve(MessageID.SEND_PATH);
-                    this.path = (List<WorldPoint>) msg.getData();
+                    path = (List<WorldPoint>) msg.getData();
                     goal = path.get(path.size() - 1);
                     msg = null;
                     calc.set(false);
@@ -126,7 +126,12 @@ public class Pathing {
                 this.type = Pathing.Type.SHORTEST_PATH;
             switch(type) {
             case SHORTEST_PATH:
-                this.calc.set(true); 
+                try {
+                    calc.set(true); 
+                } catch (NullPointerException e) {
+                    log.info("AtomicBoolean has been garbage collected, creating new one...");
+                    calc = new AtomicBoolean(true);
+                }
                 messageBus.send(new Message<MessageID, WorldPoint>(
                     MessageID.REQUEST_PATH, goal));
                 //msg = new Message<>("GOAL", goal);
@@ -134,7 +139,7 @@ public class Pathing {
                 //msg = null;
             break;
             case ETHANS_API:
-                this.path = GlobalCollisionMap.findPath(goal);
+                path = GlobalCollisionMap.findPath(goal);
             break;
             }
             return true;
@@ -214,7 +219,8 @@ public class Pathing {
 
         if (reachedGoal()) {
             log.info("Reached goal!");
-            this.finalizer();
+            //if (messageBus.query("INSTRUCTIONS")) { // xxx, finalizer if not
+            this.reset();
             return false;
         }
 

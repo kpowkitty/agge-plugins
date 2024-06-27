@@ -18,11 +18,14 @@ package com.aggeplugins.AutoQuester;
 import com.aggeplugins.AutoQuester.*;
 import com.aggeplugins.lib.*;
 
-import com.piggyplugins.PiggyUtils.API.PlayerUtil;
-import com.example.InteractionApi.NPCInteraction;
-import com.example.InteractionApi.ShopInteraction;
-import com.example.InteractionApi.InventoryInteraction;
-import com.example.InteractionApi.TileObjectInteraction;
+import com.piggyplugins.PiggyUtils.API.*;
+import com.piggyplugins.PiggyUtils.*;
+import com.example.Packets.*;
+import com.example.EthanApiPlugin.*;
+import com.example.InteractionApi.*;
+import com.example.PacketUtils.*;
+import com.example.EthanApiPlugin.Collections.*;
+import com.example.EthanApiPlugin.Collections.query.*;
 
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
@@ -38,6 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.function.BooleanSupplier;
+import java.util.Optional;
 
 @Slf4j
 public class Registry {
@@ -342,28 +346,40 @@ public class Registry {
         }
 
         // Fred the Farmer, pickup shears
-        path(new WorldPoint(3190, 3273, 0));
+        path(3191, 3272);
         interact("Shears", TAKE, TILE_ITEM);
 
         // Go to sheep pen
-        path(new WorldPoint(3201, 3268, 0));
+        path(3196, 3277);
+        interact(12982, "Climb-over", TILE_OBJECT); // stile
+        register(() -> !Action.isInteractingTO(ctx.client));
+
         // Collect 20 wool.
         for (int i = 0; i < 3; i++) {
             interact(NpcID.SHEEP_2786, "Shear", NPC);   // 1
-            block(longCont);
+            register(() -> !Action.isInteractingNPC(ctx.client));
+            //block(longCont);
             interact(NpcID.SHEEP_2699, "Shear", NPC);   // 2
-            block(longCont);
+            register(() -> !Action.isInteractingNPC(ctx.client));
+            //block(longCont);
             interact(NpcID.SHEEP_2787, "Shear", NPC);   // 3
-            block(longCont);
+            register(() -> !Action.isInteractingNPC(ctx.client));
+            //block(longCont);
             interact(NpcID.SHEEP_2693, "Shear", NPC);   // 4
-            block(longCont);
+            register(() -> !Action.isInteractingNPC(ctx.client));
+            //block(longCont);
             interact(NpcID.SHEEP_2694, "Shear", NPC);   // 5
-            block(longCont);
+            register(() -> !Action.isInteractingNPC(ctx.client));
+            //block(longCont);
             interact(NpcID.SHEEP_2699, "Shear", NPC);   // 6
-            block(longCont);
+            register(() -> !Action.isInteractingNPC(ctx.client));
+            //block(longCont);
             interact(NpcID.SHEEP_2695, "Shear", NPC);   // 7
-            block(medWait);
+            register(() -> !Action.isInteractingNPC(ctx.client));
+            //block(medWait);
         }                                               // = 21
+        
+        //pathDoor(3228, 3246);
 
         // Go to Lumbridge Castle staircase
         path(new WorldPoint(3206, 3208, 0));
@@ -964,6 +980,44 @@ public class Registry {
         instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
     }
 
+    private void pathDoor(int x, int y)
+    {
+        path(x, y);
+        if (canOpenDoor(1)) {
+            interact("Door", "Open", TILE_OBJECT);
+            instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                  "Opening door");
+        }
+        else if (canOpenGate(1)) {
+            interact("Gate", "Open", TILE_OBJECT);
+            instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                        "Opening gate");
+        }
+    }
+
+    private void openDoor()
+    {
+        if (canOpenDoor(MAX_DISTANCE)) {
+            interact("Door", "Open", TILE_OBJECT);
+            instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                        "Opening door");
+        } else if (canOpenGate(MAX_DISTANCE)) {
+            interact("Gate", "Open", TILE_OBJECT);
+            instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                        "Opening gate");
+        } else {
+            log.info("Tried to open door, but no door to open!");
+        }
+    }
+
+    private void pathTO(int x, int y, int id, String action)
+    {
+        path(x, y);
+        interact(id, action, TILE_OBJECT);
+        instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                    action + "ing " + id);
+    }
+
     private void talk(String name)
     {
         instructions.register(() -> Action.interactNPC(name, "Talk-to"),
@@ -1050,6 +1104,28 @@ public class Registry {
         }
     }
 
+    private boolean canOpenDoor(int distance)
+    {
+        return !TileObjects.search()
+                           .nameContains("Door").withAction("Open")
+                           .withinDistance(distance)
+                           .empty();
+    }
+
+    private boolean canOpenGate(int distance)
+    {
+        return !TileObjects.search()
+                           .nameContains("Gate").withAction("Open")
+                           .withinDistance(distance)
+                           .empty();
+    }
+
+    // xxx likely will fix timers with npcs, also look into way for overall 
+    // animations
+    //// Check both if the player is interacting and if there is an interaction target
+    //boolean currentlyInCombat = plugin.getClient().getLocalPlayer().isInteracting() &&
+    //        plugin.getClient().getLocalPlayer().getInteracting() != null;
+
     /** 
      a Common dialogue helper macros.
      */
@@ -1118,6 +1194,8 @@ public class Registry {
      * IDs, but enumerate common ones.
      */
     private final String TAKE = "3";
+
+    private int MAX_DISTANCE = 10;
 
     /**
      * Seeded random variables for the registry.
