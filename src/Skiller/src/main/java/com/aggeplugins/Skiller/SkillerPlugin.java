@@ -14,6 +14,8 @@
 package com.aggeplugins.Skiller;
 
 import com.aggeplugins.Skiller.*;
+import com.aggeplugins.lib.*;
+import com.aggeplugins.lib.StateStack.*;
 import com.aggeplugins.MessageBus.*;
 
 import com.example.EthanApiPlugin.Collections.*;
@@ -81,10 +83,9 @@ public class SkillerPlugin extends Plugin {
 
     // Context handles all domain-specific plugin context from here.
     private StateStack stack;
-    private Context ctx;
+    private SkillerContext ctx;
     private int timeout;
     private MessageBus messageBus;
-    private Message<String, Boolean> msg;
 
     public boolean started;
     public String currState = "";
@@ -120,7 +121,7 @@ public class SkillerPlugin extends Plugin {
     private void initInstance()
     {
         try {
-            ctx = new Context(this, config, client, clientThread);
+            ctx = new SkillerContext(this, config, client, clientThread);
         } catch (NullPointerException e) {
             log.info("Unable to initialize plugin context!");
         }

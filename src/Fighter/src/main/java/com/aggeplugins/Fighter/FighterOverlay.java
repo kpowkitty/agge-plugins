@@ -1,5 +1,6 @@
 package com.aggeplugins.Fighter;
 
+import com.aggeplugins.lib.*;
 
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;

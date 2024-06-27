@@ -48,14 +48,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class Action {
-    public Action(int max)  
+    public Action()  
     {
         log.info("Constructing Action!");
-        _max = max;
         _ticks = 0;
     }
 
-    public boolean continueDialogue() {
+    public static boolean continueDialogue() {
          log.info("Entering cont dialog");
          Optional<Widget> mainContinueOpt = Widgets.search().withTextContains(
             "Click here to continue").first();
@@ -92,7 +91,7 @@ public class Action {
          return false;
     }
 
-    public boolean selectDialogue(String str, int choice) {
+    public static boolean selectDialogue(String str, int choice) {
          log.info("Selecting dialogue");
          Optional<Widget> d = Widgets.search()
                                      .withTextContains(str)
@@ -114,7 +113,7 @@ public class Action {
          return false;
     }
 
-    public boolean interactNPC(String name, String action) 
+    public static boolean interactNPC(String name, String action) 
     {
          log.info("Interacting with");
          if (NPCInteraction.interact(name, action)) {
@@ -142,7 +141,7 @@ public class Action {
 
     // xxx not needed, but keeping to maybe make generic wrapper (still not 
     // really needed)
-    public boolean buyN(String name, int n)
+    public static boolean buyN(String name, int n)
     {
         log.info("Interacting with");
         if (n == 1) {
@@ -152,21 +151,21 @@ public class Action {
     }
     
     // A better solution would be to use Widget packets, but if it's only SPACE...
-    public boolean pressSpace() 
+    public static boolean pressSpace(Client client) 
     {
         try {
-            KeyEvent keyPress = new KeyEvent(AutoQuesterPlugin.client.getCanvas(), 
+            KeyEvent keyPress = new KeyEvent(client.getCanvas(), 
                     KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, 
                     KeyEvent.VK_SPACE, KeyEvent.CHAR_UNDEFINED);
-            AutoQuesterPlugin.client.getCanvas().dispatchEvent(keyPress);
-            KeyEvent keyRelease = new KeyEvent(AutoQuesterPlugin.client.getCanvas(), 
+            client.getCanvas().dispatchEvent(keyPress);
+            KeyEvent keyRelease = new KeyEvent(client.getCanvas(), 
                 KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0, 
                 KeyEvent.VK_SPACE, KeyEvent.CHAR_UNDEFINED);
-            AutoQuesterPlugin.client.getCanvas().dispatchEvent(keyRelease);
-            KeyEvent keyTyped = new KeyEvent(AutoQuesterPlugin.client.getCanvas(), 
+            client.getCanvas().dispatchEvent(keyRelease);
+            KeyEvent keyTyped = new KeyEvent(client.getCanvas(), 
                 KeyEvent.KEY_TYPED, System.currentTimeMillis(), 0, 
                 KeyEvent.VK_SPACE, KeyEvent.CHAR_UNDEFINED);
-            AutoQuesterPlugin.client.getCanvas().dispatchEvent(keyTyped);
+            client.getCanvas().dispatchEvent(keyTyped);
             return true;
         } catch (IllegalArgumentException e) {
             // Ignore the exception, SPACE executes fine.
@@ -174,7 +173,7 @@ public class Action {
         }
     }
 
-    public boolean interactTileItem(String name, int actionNo)
+    public static boolean interactTileItem(String name, int actionNo)
     {
         log.info("Trying to interact with: " + name + " " + actionNo);
         AtomicBoolean found = new AtomicBoolean(false);
@@ -197,7 +196,7 @@ public class Action {
      * How many ticks to block for.
      * @return TRUE when done blocking
      */
-    public boolean block(int ticks)
+    public static boolean block(int ticks)
     {
         log.info("Blocking next action!");
         _ticks++;
@@ -209,26 +208,26 @@ public class Action {
         return false;
     }   
 
-    public void setMax(int max)
-    {
-        _max = max;
-    }
+    //public static void setMax(int max)
+    //{
+    //    _max = max;
+    //}
 
-    public int getMax()
-    {
-        return _max;
-    }
+    //public static int getMax()
+    //{
+    //    return _max;
+    //}
 
-    public int getTicks()
+    public static int getTicks()
     {
         return _ticks;
     }
 
-    public boolean timeout(int n)
+    public static boolean timeout(int n)
     {
         return _ticks > n;
     }
     
-    private int _max;
-    private int _ticks;
+    //private int _max;
+    public static int _ticks;
 }

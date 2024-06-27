@@ -11,11 +11,9 @@
 
 package com.aggeplugins.Skiller;
 
-import com.aggeplugins.Skiller.State;
-import com.aggeplugins.Skiller.StateID;
-import com.aggeplugins.Skiller.Context;
-import com.aggeplugins.Skiller.StateStack;
-import com.aggeplugins.Skiller.Util;
+import com.aggeplugins.Skiller.*;
+import com.aggeplugins.lib.*;
+import com.aggeplugins.lib.StateStack.*;
 
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.EthanApiPlugin.Collections.query.*;
@@ -34,9 +32,10 @@ import java.util.*;
 
 @Slf4j
 public class DroppingState extends State {
-    public DroppingState(StateStack stack, Context ctx) 
+    public DroppingState(StateStack stack, SkillerContext ctx) 
     {
         super(stack, ctx);
+        this.ctx = ctx;
         init();
     }
 
@@ -81,4 +80,6 @@ public class DroppingState extends State {
         }
         return itemsToDrop.size() != 0; // if not empty, return true
     }
+
+    private SkillerContext ctx;
 }

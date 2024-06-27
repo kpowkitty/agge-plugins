@@ -1,7 +1,4 @@
-package com.aggeplugins.lib;
-
-import com.aggeplugins.lib.*;
-import com.aggeplugins.lib.export.*;
+package com.agge.AutoQuester;
 
 // To have a reference.
 public class IntPtr {

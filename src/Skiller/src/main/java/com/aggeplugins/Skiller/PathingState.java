@@ -11,12 +11,9 @@
 
 package com.aggeplugins.Skiller;
 
-import com.aggeplugins.Skiller.State;
-import com.aggeplugins.Skiller.StateID;
-import com.aggeplugins.Skiller.Context;
-import com.aggeplugins.Skiller.StateStack;
-import com.aggeplugins.Skiller.Pathing;
-import com.aggeplugins.Skiller.BankLocation;
+import com.aggeplugins.Skiller.*;
+import com.aggeplugins.lib.*;
+import com.aggeplugins.lib.StateStack.*;
 
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.EthanApiPlugin.Collections.query.*;
@@ -34,8 +31,9 @@ import java.util.*;
 
 @Slf4j
 public class PathingState extends State {
-    public PathingState(StateStack stack, Context ctx) {
+    public PathingState(StateStack stack, SkillerContext ctx) {
         super(stack, ctx);
+        this.ctx = ctx;
         this.prev = stack.getHistory().peekLast();
         this.pathing = new Pathing(ctx);
         init();
@@ -150,4 +148,5 @@ public class PathingState extends State {
     private StateID prev;
     private Pathing pathing;
     private WorldPoint goal;
+    private SkillerContext ctx;
 }

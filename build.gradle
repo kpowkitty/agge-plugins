@@ -29,7 +29,7 @@ allprojects {
 }
 
 dependencies {
-    implementation project(path: ':lib:EthansApi')
+    implementation project(path: ':extern:PiggyPlugins:EthansApi')
     implementation project(path: ':lib:PiggyUtils')
     implementation project(path: ':src:AutoBoner')
     implementation project(path: ':src:AutoCombat')
@@ -52,8 +52,9 @@ dependencies {
     implementation project(path: ':src:PathingTesting')
     implementation project(path: ':src:AutoLoot')
     implementation project(path: ':src:AutoQuester')
-    implementation project(path: ':shortest-path')
-    implementation project(path: ':src:MessageBus')
+    implementation project(path: ':lib:shortest-path')
+    implementation project(path: ':lib:lib')
+    implementation project(path: ':lib:MessageBus')
     implementation 'io.reactivex.rxjava3:rxjava:3.1.6'
 }
 

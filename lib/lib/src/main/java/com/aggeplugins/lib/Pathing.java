@@ -14,61 +14,7 @@
 package com.aggeplugins.lib;
 
 import com.aggeplugins.lib.*;
-import com.aggeplugins.lib.export.*;
-
-/* Begin shortest-path. */
-//import net.runelite.api.Client;
-//import net.runelite.api.KeyCode;
-//import net.runelite.api.MenuAction;
-//import net.runelite.api.MenuEntry;
-//import net.runelite.api.Player;
-//import net.runelite.api.Point;
-//import net.runelite.api.SpriteID;
-//import net.runelite.api.Varbits;
-//import net.runelite.api.coords.WorldPoint;
-//import net.runelite.api.events.GameTick;
-//import net.runelite.api.events.MenuEntryAdded;
-//import net.runelite.api.events.MenuOpened;
-//import net.runelite.api.widgets.ComponentID;
-//import net.runelite.api.widgets.Widget;
-//import net.runelite.api.worldmap.WorldMap;
-//import net.runelite.client.game.SpriteManager;
-//import net.runelite.client.ui.JagexColors;
-//import net.runelite.client.ui.overlay.OverlayManager;
-//import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
-//import net.runelite.client.ui.overlay.worldmap.WorldMapPoint;
-//import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
-//import net.runelite.client.util.ColorUtil;
-//import net.runelite.client.util.ImageUtil;
-//import net.runelite.client.util.Text;
-//import shortestpath.pathfinder.CollisionMap;
-//import shortestpath.pathfinder.Pathfinder;
-//import shortestpath.pathfinder.PathfinderConfig;
-//import shortestpath.pathfinder.SplitFlagMap;
-//import shortestpath.*;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.inject.Inject;
-import com.google.inject.Provides;
-import java.awt.Color;
-import java.awt.Polygon;
-import java.awt.Rectangle;
-import java.awt.Shape;
-import java.awt.Toolkit;
-import java.awt.datatransfer.StringSelection;
-import java.awt.geom.Ellipse2D;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.regex.Pattern;
-/* End shortest-path. */
+import com.aggeplugins.MessageBus.*;
 
 import com.example.EthanApiPlugin.Collections.TileObjects;
 import com.example.EthanApiPlugin.EthanApiPlugin;
@@ -132,8 +78,8 @@ public class Pathing {
                             ShortestPathPlugin.getPathfinder().getPath().size());
                         if (ShortestPathPlugin.getPathfinder().getPath().size() == 1) {
                             // re-calc
-                            msg = new Message<>("GOAL", goal);
-                            messageBus.send("PATHING", msg);
+                            //msg = new Message<>("GOAL", goal);
+                            //messageBus.send("PATHING", msg);
                         } else {
                             path = ShortestPathPlugin.getPathfinder().getPath();
                             calc.set(false);
@@ -170,9 +116,9 @@ public class Pathing {
             switch(type) {
             case SHORTEST_PATH:
                 calc.set(true);
-                msg = new Message<>("GOAL", goal);
-                messageBus.send("PATHING", msg);
-                msg = null;
+                //msg = new Message<>("GOAL", goal);
+                //messageBus.send("PATHING", msg);
+                //msg = null;
             break;
             case ETHANS_API:
                 path = GlobalCollisionMap.findPath(goal);

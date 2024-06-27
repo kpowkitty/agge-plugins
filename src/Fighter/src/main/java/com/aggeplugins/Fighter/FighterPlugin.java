@@ -13,15 +13,16 @@
 
 package com.aggeplugins.Fighter;
 
-import com.aggeplugins.Fighter.tasks.*;
+import com.aggeplugins.Fighter.*;
+import com.aggeplugins.lib.*;
+import com.aggeplugins.lib.export.TaskManager.*;
 
 import com.example.EthanApiPlugin.EthanApiPlugin;
 import com.example.Packets.*;
+import static com.example.EthanApiPlugin.EthanApiPlugin.stopPlugin;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.piggyplugins.PiggyUtils.API.PlayerUtil;
-import com.piggyplugins.PiggyUtils.strategy.AbstractTask;
-import com.piggyplugins.PiggyUtils.strategy.TaskManager;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
@@ -39,6 +40,7 @@ import net.runelite.client.util.HotkeyListener;
 import static net.runelite.api.TileItem.OWNERSHIP_SELF;
 import static net.runelite.api.TileItem.OWNERSHIP_GROUP;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.events.GameStateChanged;
 
 import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;

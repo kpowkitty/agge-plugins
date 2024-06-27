@@ -10,7 +10,8 @@
 
 package com.aggeplugins.Skiller;
 
-import com.aggeplugins.Skiller.Context;
+import com.aggeplugins.Skiller.*;
+import com.aggeplugins.lib.*;
 
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.EthanApiPlugin.Collections.query.TileObjectQuery;
@@ -44,7 +45,7 @@ import org.apache.commons.lang3.RandomUtils;
 import java.util.*;
 
 public class Util {
-    public static boolean isInventoryReset(Context ctx)
+    public static boolean isInventoryReset(SkillerContext ctx)
     {
         List<Widget> inventory = Inventory.search().result();
         for (Widget item : inventory) {
@@ -55,7 +56,7 @@ public class Util {
         return true; // we will know that the inventory is reset because the inventory only contains items we want to keep
     }
 
-    public static boolean shouldKeep(String name, Context ctx) 
+    public static boolean shouldKeep(String name, SkillerContext ctx) 
     {
         List<String> itemsToKeep = new ArrayList<>(List.of(ctx.config.itemsToKeep().split(","))); // split the items listed by comma. and add them to a list.
         itemsToKeep.addAll(List.of(ctx.config.toolsToUse().split(","))); //We must also check if the tools are included in the Inventory, Rather than equipped, so they are added here
@@ -67,7 +68,7 @@ public class Util {
         // We also prefer names to ids here, but you can change this if you like.
     }
 
-    public static boolean hasTools(Context ctx) 
+    public static boolean hasTools(SkillerContext ctx) 
     {
         //Updated from https://github.com/moneyprinterbrrr/ImpactPlugins/blob/experimental/src/main/java/com/impact/PowerGather/PowerGatherPlugin.java#L196
         //Big thanks hawkkkkkk
@@ -87,12 +88,11 @@ public class Util {
     //{
     //    timeout = RandomUtils.nextInt(SkillerPlugin.config.tickdelayMin(), SkillerPlugin.config.tickDelayMax());
     //}
-    public static boolean isTool(String name, Context ctx) 
+    public static boolean isTool(String name, SkillerContext ctx) 
     {
       String[] tools = ctx.config.toolsToUse().split(","); // split the tools listed by comma, no space.
 
       return Arrays.stream(tools) // stream the array using Arrays.stream() from java.util
               .anyMatch(i -> name.toLowerCase().contains(i.toLowerCase())); // more likely for user error than the shouldKeep option, but we'll follow the same idea as shouldKeep.
     }
-     
 }

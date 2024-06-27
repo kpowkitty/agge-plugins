@@ -12,6 +12,8 @@
 package com.aggeplugins.Skiller;
 
 import com.aggeplugins.Skiller.*;
+import com.aggeplugins.lib.*;
+import com.aggeplugins.lib.StateStack.*;
 
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.EthanApiPlugin.Collections.query.*;

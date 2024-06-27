@@ -1,0 +1,81 @@
+/**
+ * @file DroppingState.java
+ * @class DroppingState
+ * Dropping items state.
+ *
+ * @author agge3
+ * @version 1.0
+ * @since 2024-06-20
+ *
+ */
+
+package com.aggeplugins.lib.States;
+
+import com.aggeplugins.lib.*;
+import com.aggeplugins.lib.export.*;
+
+import com.example.EthanApiPlugin.Collections.*;
+import com.example.EthanApiPlugin.Collections.query.*;
+import com.example.EthanApiPlugin.*;
+import com.example.InteractionApi.*;
+import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+
+import net.runelite.api.*;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.coords.WorldPoint;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomUtils;
+
+import java.util.*;
+
+@Slf4j
+public class DroppingState extends State {
+    public DroppingState(StateStack stack, Context ctx) 
+    {
+        super(stack, ctx);
+        init();
+    }
+
+    private void init()
+    {
+        ctx.plugin.currState = "DROPPING";
+    }
+
+    @Override
+    public boolean run() 
+    {
+        if (!isDropping())
+            requestPopState();
+        return false;
+    }
+
+    @Override
+    public boolean handleEvent()
+    {
+        return false;
+    }
+    
+    //if ((isDroppingItems() && !isInventoryReset()) || !shouldBank() && Inventory.full()) {
+    //    // if the user should be dropping items, we'll check if they're done
+    //    // should sit at this state til it's finished.
+    //    return State.DROP_ITEMS;
+    //}
+
+    private boolean isDropping() {
+        // filter the inventory to only get the items we want to drop
+        List<Widget> itemsToDrop = Inventory.search()
+                                            .filter(item -> 
+            !Util.shouldKeep(item.getName(), ctx) && 
+            !Util.isTool(item.getName(), ctx)).result();
+
+        for (int i = 0; i < Math.min(itemsToDrop.size(), 
+                            RandomUtils.nextInt(ctx.config.dropPerTickOne(), 
+                                                ctx.config.dropPerTickTwo())); 
+             i++) {
+            // we'll loop through this at a max of 10 times.  can make this a config options.  drops x items per tick (x = 10 in this example)
+            InventoryInteraction.useItem(itemsToDrop.get(i), "Drop");
+        }
+        return itemsToDrop.size() != 0; // if not empty, return true
+    }
+}

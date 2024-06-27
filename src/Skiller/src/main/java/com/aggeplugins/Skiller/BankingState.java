@@ -11,11 +11,9 @@
 
 package com.aggeplugins.Skiller;
 
-import com.aggeplugins.Skiller.State;
-import com.aggeplugins.Skiller.StateID;
-import com.aggeplugins.Skiller.Context;
-import com.aggeplugins.Skiller.StateStack;
-import com.aggeplugins.Skiller.Util;
+import com.aggeplugins.Skiller.*;
+import com.aggeplugins.lib.*;
+import com.aggeplugins.lib.StateStack.*;
 
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.EthanApiPlugin.Collections.query.*;
@@ -35,9 +33,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class BankingState extends State {
-    public BankingState(StateStack stack, Context ctx) 
+    public BankingState(StateStack stack, SkillerContext ctx) 
     {
         super(stack, ctx);
+        this.ctx = ctx;
         init();
     }
 
@@ -180,4 +179,6 @@ public class BankingState extends State {
      * too far away, and properly enters the pathing state.
      */
     private int MAX_DISTANCE = 5;
+
+    private SkillerContext ctx;
 }

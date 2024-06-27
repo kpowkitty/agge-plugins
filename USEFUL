@@ -1,0 +1,8 @@
+// send chat messages
+String chatMessage = new ChatMessageBuilder()
+        .append(Color.red, message)
+        .build();
+chatMessageManager.queue(QueuedMessage.builder()
+                .type(ChatMessageType.CONSOLE)
+                .runeLiteFormattedMessage(chatMessage)
+                .build());
