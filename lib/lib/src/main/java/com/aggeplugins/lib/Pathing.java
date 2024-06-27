@@ -89,7 +89,7 @@ public class Pathing {
                 if (messageBus.query(MessageID.SEND_PATH)) {
                     msg = (Message<MessageID, List<WorldPoint>>)
                         messageBus.recieve(MessageID.SEND_PATH);
-                    path = (List<WorldPoint>) msg.getData();
+                    this.path = (List<WorldPoint>) msg.getData();
                     goal = path.get(path.size() - 1);
                     msg = null;
                     calc.set(false);
@@ -99,31 +99,34 @@ public class Pathing {
         return calc.get();
     }
 
-    public void setType(Pathing.Type type)
+    public boolean setType(Pathing.Type type)
     {
         switch(type) {
         case SHORTEST_PATH:
             this.type = Pathing.Type.SHORTEST_PATH;
             log.info("Pathing type set to: " + this.type);
-            break;
+            return true;
         case ETHANS_API:
             this.type = Pathing.Type.ETHANS_API;
             log.info("Pathing type set to: " + this.type);
-            break;
+            return true;
         default:
             // default is EthansApi, less semantics
             this.type = Pathing.Type.ETHANS_API;
             log.info("Pathing type set to: " + this.type);
-            break;
+            return true;
         }
     }
 
     public boolean setPath()
     {
         if (goal != null) {
+            // Caller forgot to set pathing type, default correct for them.
+            if (type == null)
+                this.type = Pathing.Type.SHORTEST_PATH;
             switch(type) {
             case SHORTEST_PATH:
-                calc.set(true);
+                this.calc.set(true); 
                 messageBus.send(new Message<MessageID, WorldPoint>(
                     MessageID.REQUEST_PATH, goal));
                 //msg = new Message<>("GOAL", goal);
@@ -131,7 +134,7 @@ public class Pathing {
                 //msg = null;
             break;
             case ETHANS_API:
-                path = GlobalCollisionMap.findPath(goal);
+                this.path = GlobalCollisionMap.findPath(goal);
             break;
             }
             return true;
@@ -222,25 +225,25 @@ public class Pathing {
         //}
 
         if (path != null && path.size() >= 1) {
-            log.info("Current path goal is: " + path.get(path.size() - 1));
+            //log.info("Current path goal is: " + path.get(path.size() - 1));
             ticks = 0;
             if (currPathDest != null && 
                 !atCurrPathDest() && !EthanApiPlugin.isMoving()) {
 
-                log.info("Stopped walking, clicking destination again");
+                //log.info("Stopped walking, clicking destination again");
                 MousePackets.queueClickPacket();
                 MovementPackets.queueMovement(currPathDest);
             }
                 
             if (currPathDest == null || 
                 atCurrPathDest() || !EthanApiPlugin.isMoving()) {
-                log.info("Current path destination is " + currPathDest);
+                //log.info("Current path destination is " + currPathDest);
 
                 int step = rand.nextInt((35 - 10) + 1) + 10;
                 int max = step;
                 for (int i = 0; i < step; i++) {
                     if (path.size() - 2 >= i) {
-                        log.info("Current path is" + path.get(i));
+                        //log.info("Current path is" + path.get(i));
                         if (isDoored(path.get(i), path.get(i + 1))) {
                             max = i;
                             break;
@@ -256,7 +259,7 @@ public class Pathing {
                     }
                     ObjectPackets.queueObjectAction(
                         wallObject, false, "Open", "Close");
-                    log.info("Return TRUE");
+                    //log.info("Return TRUE");
                     return true;
                 }
 
@@ -277,13 +280,13 @@ public class Pathing {
                     return true;
                 }
                
-                log.info("Sending mouse packets!");
+                //log.info("Sending mouse packets!");
                 MousePackets.queueClickPacket();
                 MovementPackets.queueMovement(currPathDest);
             }
         }
 
-        log.info("Reached return TRUE");
+        //log.info("Reached return TRUE");
         return true;
     }
 

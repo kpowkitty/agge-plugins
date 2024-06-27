@@ -148,9 +148,9 @@ public class Instructions {
      */
     public String getName()
     {
-        // Need to have idx + 1 to see the proper instruction.
+        // Need to have idx + 1 to see the proper instruction. xxx maybe not?
         try {
-            return _names.get(_idx + 1);
+            return _names.get(_idx);
         } catch (Exception e) {
             // Just catch the out-of-bounds exception and return a message.
             return "Last instruction!";

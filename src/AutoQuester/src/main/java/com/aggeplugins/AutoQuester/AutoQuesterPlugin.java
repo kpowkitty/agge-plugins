@@ -127,9 +127,9 @@ public class AutoQuesterPlugin extends Plugin {
         else
             idleTicks = 0;
 
+        Action.checkRunEnergy(client);
+
         _instructions.executeInstructions();
-        pathing.run();
-        checkRunEnergy();
             
         // logging
         log.info("Idle ticks: " + action.getTicks());
@@ -229,21 +229,21 @@ public class AutoQuesterPlugin extends Plugin {
         _instructions = new Instructions();
         //action = new Action(2);
 
-        if (pathing == null) {
-            log.error("Pathing is not initialized properly");
-            throw new IllegalStateException(
-                "Pathing is not initialized properly");
-        }
+        //if (pathing == null) {
+        //    log.error("Pathing is not initialized properly");
+        //    throw new IllegalStateException(
+        //        "Pathing is not initialized properly");
+        //}
         if (_instructions == null) {
             log.error("Instructions is not initialized properly");
             throw new IllegalStateException(
                 "Instructions is not initialized properly");
         }
-        if (action == null) {
-            log.error("Action is not initialized properly");
-            throw new IllegalStateException(
-                "Action is not initialized properly");
-        }
+        //if (action == null) {
+        //    log.error("Action is not initialized properly");
+        //    throw new IllegalStateException(
+        //        "Action is not initialized properly");
+        //}
     }
 
 

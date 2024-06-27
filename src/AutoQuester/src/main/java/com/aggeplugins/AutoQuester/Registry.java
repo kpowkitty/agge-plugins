@@ -931,7 +931,10 @@ public class Registry {
 
     private void path(WorldPoint wp)
     {
+        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH), 
+            "Setting path type");
         instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
+        instructions.register(() -> pathing.setPath(), "Setting path");
         instructions.register(() -> !pathing.calculatingPath(), 
             "Calculating path...");
         instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
@@ -940,7 +943,10 @@ public class Registry {
     private void path(int x, int y)
     {
         WorldPoint wp = new WorldPoint(x, y, 0);
+        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH), 
+            "Setting path type");
         instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
+        instructions.register(() -> pathing.setPath(), "Setting path");
         instructions.register(() -> !pathing.calculatingPath(), 
             "Calculating path...");
         instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
@@ -949,7 +955,10 @@ public class Registry {
     private void path(int x, int y, int z)
     {
         WorldPoint wp = new WorldPoint(x, y, z);
+        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH), 
+            "Setting path type");
         instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
+        instructions.register(() -> pathing.setPath(), "Setting path");
         instructions.register(() -> !pathing.calculatingPath(), 
             "Calculating path...");
         instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
@@ -1058,10 +1067,8 @@ public class Registry {
     }
 
     private void cmed()
-    {        // bush1 = 23635, bush2 = 23625, bush3 = 33183
+    {
         // random select
-        int[] a = {23635, 23625, 33183};
-        int tmp = rand.nextInt(a.length);
         instructions.register(() -> Action.continueDialogue(),
                 "Continue dialogue: " + medCont + " times",
                 Optional.of(medCont));
