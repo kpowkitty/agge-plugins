@@ -7,7 +7,7 @@
  * @since 2024-06-18
  *
  * Derived in large part from Fighter.
- * Original source credit goes to EthanApi and PiggyPlugins. The diffs represent 
+ * Original source credit goes to EthanApi and PiggyPlugins. The diffs represent
  * my contributions as part of Agge Plugins.
  */
 
