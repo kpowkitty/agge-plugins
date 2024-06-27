@@ -8,5 +8,9 @@ package com.aggeplugins.MessageBus;
 
 public enum MessageID {
     REQUEST_PATH,
-    SEND_PATH;
+    SEND_PATH,
+    INSTRUCTIONS,
+    REQUEST_SKILLING,
+    DONE_SKILLING,
+    ERROR_SKILLING;
 }

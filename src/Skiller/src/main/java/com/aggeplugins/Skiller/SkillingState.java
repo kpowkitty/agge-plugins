@@ -53,7 +53,6 @@ public class SkillingState extends State {
 
     private void init()
     {
-        ctx.plugin.currState = "SKILLING";
     }
 
     @Override

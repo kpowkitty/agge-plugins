@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Optional;
 import java.awt.event.KeyEvent;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Random;
 
 @Slf4j
 public class Action {
@@ -207,6 +208,16 @@ public class Action {
         }
         return false;
     }   
+
+    public static void checkRunEnergy(Client client) 
+    {
+        Random rand = new Random();
+        if (client.getVarpValue(173) == 0 && 
+            client.getEnergy() >= rand.nextInt(50) * 100) { // random 0-50
+            MousePackets.queueClickPacket();
+            WidgetPackets.queueWidgetActionPacket(1, 10485787, -1, -1);
+        }
+    }
 
     //public static void setMax(int max)
     //{

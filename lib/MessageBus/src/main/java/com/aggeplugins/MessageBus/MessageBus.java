@@ -79,6 +79,8 @@ public class MessageBus {
     public synchronized void send(Message<MessageID, ?> msg, long timeout, 
                                                              TimeUnit unit)
     {   
+        log.info("Recieved send request for Message with ID: " + msg.getId());
+        log.info("Timeout: " + timeout + " " + unit);
         this.messages.put(msg.getId(), msg);
         this.scheduler.schedule(() -> messages.remove(msg.getId()),
                                 timeout, unit);
@@ -94,7 +96,8 @@ public class MessageBus {
      */
     public synchronized boolean query(MessageID id)
     {
-        log.info("Recieved query request for Message with ID: " + id);
+        // will spam because constant query
+        //log.info("Recieved query request for Message with ID: " + id);
         if (this.messages.isEmpty())
             return false;
         return this.messages.get(id) != null;
@@ -113,14 +116,44 @@ public class MessageBus {
      * first.
      */
     @SuppressWarnings("unchecked")
-    public synchronized Message<MessageID, ?> recieve(Message id)
+    public synchronized Message<MessageID, ?> recieve(MessageID id)
     {
+        log.info("Recieved recieve request for Message with ID: " + id);
         Message<MessageID, ?> msg = this.messages.get(id);
         if (msg != null) {
             this.messages.remove(id);
             return msg;
         }
         return null;
+    }
+
+    /**
+     * Remove Message with specified MessageID from the MessageBus.
+     *
+     * @return TRUE if success, FALSE if failure or Message does not exist
+     *
+     * @warning Destructive procedure, will remove Message.
+     */
+    public synchronized boolean remove(MessageID id)
+    {
+        log.info("Recieved remove request for Message with ID: " + id);
+        if (this.messages.remove(id) != null)
+            return true;
+        return false;
+    }
+
+    /**
+     * Clear all Message(s) on the MessageBus.
+     *
+     * @return TRUE if success, FALSE if failure or MessageBus is not clear
+     *
+     * @warning Destructive procedure, will clear ALL Message(s)!
+     */
+    public synchronized boolean clear()
+    {
+        log.info("Recieved clear all Messages request");
+        this.messages.clear();
+        return this.messages.isEmpty();
     }
 
     /**
@@ -131,6 +164,7 @@ public class MessageBus {
      */
     public void shutdown()
     {
+        log.info("Recieved shutdown request");
         this.scheduler.shutdown();
         try {
             if (!this.scheduler.awaitTermination(10, TimeUnit.SECONDS)) {

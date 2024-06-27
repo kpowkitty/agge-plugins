@@ -41,7 +41,6 @@ public class DroppingState extends State {
 
     private void init()
     {
-        ctx.plugin.currState = "DROPPING";
     }
 
     @Override

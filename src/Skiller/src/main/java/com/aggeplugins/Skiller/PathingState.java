@@ -130,7 +130,6 @@ public class PathingState extends State {
         pathing.setType(Pathing.Type.SHORTEST_PATH);
         pathing.setGoal(goal);
         pathing.setPath();
-        ctx.plugin.currState = "PATHING";
     }
 
     /**

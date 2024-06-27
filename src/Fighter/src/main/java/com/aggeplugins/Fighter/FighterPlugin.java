@@ -173,8 +173,7 @@ public class FighterPlugin extends Plugin {
 
         log.info("Game tick observed. Queue size before any operation: {}", lootQueue.size());
 
-        // Existing logic here
-        checkRunEnergy();
+        Action.checkRunEnergy(client);
 
         // Wrap the entire main run loop in a tick delay.
         if (tickDelay-- <= 0) {
@@ -225,16 +224,16 @@ public class FighterPlugin extends Plugin {
         return config.loot().contains(itemName);
     }
 
-    private void checkRunEnergy() {
-        if (runIsOff() && client.getEnergy() >= 30 * 100) {
-            MousePackets.queueClickPacket();
-            WidgetPackets.queueWidgetActionPacket(1, 10485787, -1, -1);
-        }
-    }
+    //private void checkRunEnergy() {
+    //    if (runIsOff() && client.getEnergy() >= 30 * 100) {
+    //        MousePackets.queueClickPacket();
+    //        WidgetPackets.queueWidgetActionPacket(1, 10485787, -1, -1);
+    //    }
+    //}
 
-    private boolean runIsOff() {
-        return EthanApiPlugin.getClient().getVarpValue(173) == 0;
-    }
+    //private boolean runIsOff() {
+    //    return EthanApiPlugin.getClient().getVarpValue(173) == 0;
+    //}
 
     private final HotkeyListener toggle = new HotkeyListener(() -> config.toggle()) {
         @Override

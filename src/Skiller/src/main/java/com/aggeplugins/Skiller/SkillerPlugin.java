@@ -206,6 +206,12 @@ public class SkillerPlugin extends Plugin {
             return;
         }
 
+        if (messageBus.query(MessageID.INSTRUCTIONS)) {
+            // Don't run and listen for instructions if being controlled by
+            // AccountBuilder.
+            return;
+        }
+
         // For current WorldPoint polling (to find skilling location 
         // WorldPoint(s)).
         if (config.pollWp()) {
@@ -213,16 +219,15 @@ public class SkillerPlugin extends Plugin {
                 client.getLocalPlayer().getWorldLocation());
         }
 
-        // Uncomment to debug ShortestPath outside of StateStack.
-        //if (ShortestPathPlugin.getPathfinder() != null) {
-        //    if (ShortestPathPlugin.getPathfinder().isDone()) {
-        //        log.info("Shortest path working!");
-        //        log.info("Size: " + ShortestPathPlugin.getPathfinder().getPath().size());
-        //    }
-        //}
+        // Handle run energy.
+        Action.checkRunEnergy(client);
 
         // Let states control everything else.
         stack.run();
+        // Set the current overlay State name to the top of the StateStack 
+        // (after running the State to not interupt the run procedure).
+        if (stack.size() > 1) // let skilling control its own name
+            currState = stack.peekName();
     }
 
     private void setTimeout() {

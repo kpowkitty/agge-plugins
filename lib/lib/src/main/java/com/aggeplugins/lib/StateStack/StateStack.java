@@ -118,6 +118,32 @@ public class StateStack {
         return new ArrayDeque<StateID>(history);
     }
 
+    /**
+     * Peek at the name of the top State (StateID) of the StateStack. Uses 
+     * history to be low-cost.
+     * Useful for getting the name of the currently running State.
+     *
+     * @return String name
+     * The name of the State (StateID) at the top of the StateStack.
+     */
+    public String peekName()
+    {
+        return history.peekLast().toString();
+    }
+
+    /**
+     * Returns the size of the StateStack. Uses history to be low-cost.
+     * Useful for determining how deep the StateStack is, or special behavior
+     * for the bottom State (like more complex names).
+     *
+     * @return int size
+     * The current size of the StateStack.
+     */
+    public int size()
+    {
+        return history.size();
+    }
+
     private State createState(StateID stateId)
     {
         Supplier<State> factory = factories.get(stateId);

@@ -51,7 +51,6 @@ public class BankingState extends State {
 
     private void init()
     {
-        ctx.plugin.currState = "BANKING";
     }
 
     @Override

@@ -72,19 +72,27 @@ public class Pathing {
     {
         if (type == Pathing.Type.SHORTEST_PATH) {
             if (calc.get()) {
-                if (ShortestPathPlugin.getPathfinder() != null) {
-                    if (ShortestPathPlugin.getPathfinder().isDone()) {
-                        log.info("ShortestPath size: " +
-                            ShortestPathPlugin.getPathfinder().getPath().size());
-                        if (ShortestPathPlugin.getPathfinder().getPath().size() == 1) {
-                            // re-calc
-                            //msg = new Message<>("GOAL", goal);
-                            //messageBus.send("PATHING", msg);
-                        } else {
-                            path = ShortestPathPlugin.getPathfinder().getPath();
-                            calc.set(false);
-                        }
-                    }
+                //if (ShortestPathPlugin.getPathfinder() != null) {
+                //    if (ShortestPathPlugin.getPathfinder().isDone()) {
+                //        log.info("ShortestPath size: " +
+                //            ShortestPathPlugin.getPathfinder().getPath().size());
+                //        if (ShortestPathPlugin.getPathfinder().getPath().size() == 1) {
+                //            // re-calc
+                //            //msg = new Message<>("GOAL", goal);
+                //            //messageBus.send("PATHING", msg);
+                //        } else {
+                //            path = ShortestPathPlugin.getPathfinder().getPath();
+                //            calc.set(false);
+                //        }
+                //    }
+                //}
+                if (messageBus.query(MessageID.SEND_PATH)) {
+                    msg = (Message<MessageID, List<WorldPoint>>)
+                        messageBus.recieve(MessageID.SEND_PATH);
+                    path = (List<WorldPoint>) msg.getData();
+                    goal = path.get(path.size() - 1);
+                    msg = null;
+                    calc.set(false);
                 }
             }
         }
@@ -116,6 +124,8 @@ public class Pathing {
             switch(type) {
             case SHORTEST_PATH:
                 calc.set(true);
+                messageBus.send(new Message<MessageID, WorldPoint>(
+                    MessageID.REQUEST_PATH, goal));
                 //msg = new Message<>("GOAL", goal);
                 //messageBus.send("PATHING", msg);
                 //msg = null;
@@ -183,8 +193,10 @@ public class Pathing {
 
     public boolean reachedGoal() 
     {
-        return goal != null && 
-               goal.equals(ctx.client.getLocalPlayer().getWorldLocation());
+        //return goal != null && 
+        //       goal.equals(ctx.client.getLocalPlayer().getWorldLocation());
+        return goal != null && goal.equals(getPos()) && 
+               !EthanApiPlugin.isMoving();
     }
 
     public boolean timeout(int n)
@@ -192,23 +204,22 @@ public class Pathing {
         return true;
     }
 
+    // xxx not returning false when done pathing
     public boolean run() 
     {
-        log.info("Pathing: Current goal is " + goal);
-        log.info("Current path is " + path.get(0));
         ++ticks;
 
-        if (reachedGoal() && goal == null) {
+        if (reachedGoal()) {
             log.info("Reached goal!");
             this.finalizer();
             return false;
         }
 
-        if (path == null && ticks > 5) {
-            log.info("Idling with no path. Exiting");
-            this.finalizer();
-            return false;
-        }
+        //if (path == null && ticks > 5) {
+        //    log.info("Idling with no path. Exiting");
+        //    this.finalizer();
+        //    return false;
+        //}
 
         if (path != null && path.size() >= 1) {
             log.info("Current path goal is: " + path.get(path.size() - 1));
@@ -223,7 +234,6 @@ public class Pathing {
                 
             if (currPathDest == null || 
                 atCurrPathDest() || !EthanApiPlugin.isMoving()) {
-
                 log.info("Current path destination is " + currPathDest);
 
                 int step = rand.nextInt((35 - 10) + 1) + 10;
@@ -239,7 +249,6 @@ public class Pathing {
                 }
 
                 if (isDoored(getPos(), path.get(0))) {
-                    log.info("Current path is " + currPathDest);
                     log.info("Door!");
                     WallObject wallObject = getTile(getPos()).getWallObject();
                     if (wallObject == null) {
@@ -247,29 +256,34 @@ public class Pathing {
                     }
                     ObjectPackets.queueObjectAction(
                         wallObject, false, "Open", "Close");
+                    log.info("Return TRUE");
                     return true;
                 }
 
                 step = Math.min(max, path.size() - 1);
                 currPathDest = path.get(step);
-                log.info("Current path destination is " + currPathDest);
+                //log.info("Current path destination is " + currPathDest);
 
                 if (path.indexOf(currPathDest) == (path.size() - 1)) {
+                    log.info("path = null");
                     path = null;
                 } else {
                     path = path.subList(step + 1, path.size());
+                    log.info("path.subList(step + 1, path.size())");
                 }
 
                 if (currPathDest.equals(getPos())) {
+                    log.info("currPathDest equals pos -- Return TRUE");
                     return true;
                 }
-                
-                log.info("Current path destination is " + currPathDest);
-                log.info("Pathing: Taking a step");
+               
+                log.info("Sending mouse packets!");
                 MousePackets.queueClickPacket();
                 MovementPackets.queueMovement(currPathDest);
             }
         }
+
+        log.info("Reached return TRUE");
         return true;
     }
 
@@ -446,7 +460,7 @@ public class Pathing {
     private AtomicBoolean calc;
     private Pathing.Type type;
     private MessageBus messageBus;
-    private Message<String, WorldPoint> msg;
+    private Message<MessageID, ?> msg;
 
     private int ticks;
 }

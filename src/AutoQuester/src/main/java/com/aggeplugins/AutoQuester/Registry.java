@@ -53,25 +53,25 @@ public class Registry {
 
         // Instance context.
         _cfg = ctx.cfg;
-        _instructions = ctx.instructions;
-        _pathing = new Pathing(this.ctx);
-        //_action = ctx.action;
+        this.instructions = ctx.instructions;
+        this.pathing = new Pathing(this.ctx);
+        this.pathing.setType(Pathing.Type.SHORTEST_PATH);
 
-        this._rand = new Random();
+        this.rand = new Random();
         // Random between 1 and 3 (inclusive).
-        minWait = 1 + _rand.nextInt(3);
+        minWait = 1 + this.rand.nextInt(3);
         // Random between 2 and 4 (inclusive).
-        shortCont = 2 + _rand.nextInt(3);
+        shortCont = 2 + this.rand.nextInt(3);
         // Random between 3 and 6 (inclusive).
-        medCont = 3 + _rand.nextInt(4);
+        medCont = 3 + this.rand.nextInt(4);
         // Random between 7 and 12 (inclusive).
-        longCont = 7 + _rand.nextInt(6);
+        longCont = 7 + this.rand.nextInt(6);
         // Random between 10 and 15 (inclusive).
-        shortWait = 10 + _rand.nextInt(6);
+        shortWait = 10 + this.rand.nextInt(6);
         // Random between 20 and 35 (inclusive).
-        medWait = 20 + _rand.nextInt(16);
+        medWait = 20 + this.rand.nextInt(16);
         // Random between 50 and 120 (inclusive).
-        longWait = 50 + _rand.nextInt(71);
+        longWait = 50 + this.rand.nextInt(71);
     }
 
     // Register all the instructions, these will return TRUE when they should
@@ -79,165 +79,6 @@ public class Registry {
     public void testInstructions()
     {
         //10747973 // normal dialogue        
-        //
-        interact("Fishing spot", "Net", TILE_OBJECT);
-        block(shortWait);
-
-        // xxx widget
-        block(longWait);
-
-        block(medCont);
-
-        talk("Survival Expert");
-        cshort();
-
-        interact("Tree", "Chop down", TILE_OBJECT);
-        block(shortWait);
-
-        interact("Logs", "Use", INVENTORY);
-        interact("Tinderbox", "Use", INVENTORY);
-        block(shortWait);
-
-        interact("Raw shrimps", "Use", INVENTORY);
-        interact("Fire", "Use", TILE_OBJECT);
-        block(shortWait);
-
-        path(3090, 3092);
-        interact("Gate", "Open", TILE_OBJECT);
-        block(shortCont);
-
-        path(3079, 3084);
-        interact("Door", "Open", TILE_OBJECT);
-        block(shortWait);
-
-        talk("Master Chef");
-        cshort();
-
-        interact("Pot of flour", "Use", INVENTORY);
-        interact("Bucket of water", "Use", INVENTORY);
-        interact("Bread dough", "Use", INVENTORY);
-        interact("Range", "Use", TILE_OBJECT);
-        block(shortWait);
-
-        path(3073, 3090);
-        block(shortCont);
-
-        path(3086, 3124);
-        interact("Door", "Open", TILE_OBJECT);
-        block(shortCont);
-        talk("Quest Guide");
-        cont();
-
-        // widget
-        block(longWait);
-
-        talk("Quest Guide");
-        cmed();
-        interact("Ladder", "Climb-down", TILE_OBJECT);
-        block(shortWait);
-
-        talk("Mining Instructor");
-        cmed();
-
-        interact("Tin rocks", "Mine", TILE_OBJECT);
-        block(medWait);
-        interact("Copper rocks", "Mine", TILE_OBJECT);
-        block(medWait);
-
-        interact("Furnace", "Use", TILE_OBJECT);
-        block(medWait);
-
-        talk("Mining Instruction");
-        cshort();
-
-        // widget
-        block(longWait);
-
-        path(3093, 9502);
-        interact("Gate", "Open", TILE_OBJECT);
-        talk("Combat Instructor");
-        cshort();
-
-        // widget
-        block(longWait);
-
-        interact("Bronze dagger", "Wield", INVENTORY);
-        talk("Combat Instructor");
-        cshort();
-        interact("Bronze sword", "Wield", INVENTORY);
-        interact("Wooden shield", "Wield", INVENTORY);
-
-        // widget
-        block(longWait);
-
-        path(3111, 9518);
-        interact("Gate", "Open", TILE_OBJECT);
-
-        interact("Giant rat", "Attack", NPC);
-        block(medWait);
-        path(3110, 9518);
-        interact("Gate", "Open", TILE_OBJECT);
-        block(medCont);
-        talk("Combat Instructor");
-        cshort();
-
-        // widget
-        block(longWait);
-
-        interact("Shortbow", "Wield", INVENTORY);
-        interact("Bronze arrow", "Wield", INVENTORY);
-        interact("Giant rat", "Attack", NPC);
-
-        path(3111, 9525);
-        interact("Ladder", "Climb-up", TILE_OBJECT);
-        block(shortCont);
-        block(shortWait);
-
-        path(3122, 3123);
-        interact("Bank both", "Use", TILE_OBJECT);
-        block(shortCont);
-
-        // widget
-        block(longWait);
-
-        path(3120, 3121);
-        interact("Poll both", "Use", TILE_OBJECT);
-        block(shortCont);
-        cshort();
-
-        // widget
-        block(longWait);
-
-        path(3124, 3124);
-        interact("Door", "Open", TILE_OBJECT);
-        block(shortCont);
-        talk("Account Guide");
-        cshort();
-
-        // widget
-        block(longWait);
-
-        talk("Account Guide");
-        clong();
-        path(3129, 3124);
-        interact("Door", "Open", TILE_OBJECT);
-        block(shortCont);
-
-        path(3125, 3107);
-        talk("Brother Brace");
-        cshort();
-
-        // widget
-        block(longWait);
-
-        talk("Brother Brace");
-        cshort();
-
-        // widget
-        block(longWait);
->>>>>>> a4330492e731c43a9ad1bf37599810e5acb0bf5a:src/AutoQuester/src/main/java/com/agge/AutoQuester/Registry.java
-
-
 
         //block(longWait);
 
@@ -532,7 +373,7 @@ public class Registry {
         path(new WorldPoint(3209, 3213, 1));
         interact("Spinning wheel", "Spin", TILE_OBJECT);
 
-        register(() -> _action.pressSpace(), null);
+        register(() -> Action.pressSpace(ctx.client), null);
         block(medWait);
 
         // Climb-down stairs
@@ -757,11 +598,11 @@ public class Registry {
         dialogue("Talk about Romeo & Juliet.", 1);
         cmed();
         block(shortWait); // animation
-        register(() -> _action.pressSpace(), null);
+        register(() -> Action.pressSpace(ctx.client), null);
         clong();
         // Final chat is him giving you potion, is this needed v ? check!
-        block(shortWait();
-        register(() -> _action.pressSpace(), null);
+        block(shortWait);
+        register(() -> Action.pressSpace(ctx.client), null);
 
         // To Juliet.
         path(3159, 3436);
@@ -1078,40 +919,51 @@ public class Registry {
     private void register(BooleanSupplier f, Integer n)
     {
         if (n == null)
-            _instructions.register(f, "Undefined instruction", Optional.empty());
+            instructions.register(f, "Undefined instruction", Optional.empty());
         else
-            _instructions.register(f, "Undefined instruction", Optional.of(n));
+            instructions.register(f, "Undefined instruction", Optional.of(n));
+    }
+
+    private void register(BooleanSupplier f)
+    {
+        instructions.register(f, "Undefined instruction");
     }
 
     private void path(WorldPoint wp)
     {
-        _instructions.register(() -> _pathing.setGoal(wp), "Path to: " + wp);
-        _instructions.register(() -> _pathing.reachedGoal(), "Pathing to: " + wp);
+        instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
+        instructions.register(() -> !pathing.calculatingPath(), 
+            "Calculating path...");
+        instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
     }
 
     private void path(int x, int y)
     {
         WorldPoint wp = new WorldPoint(x, y, 0);
-        _instructions.register(() -> _pathing.setGoal(wp), "Path to: " + wp);
-        _instructions.register(() -> _pathing.reachedGoal(), "Pathing to: " + wp);
+        instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
+        instructions.register(() -> !pathing.calculatingPath(), 
+            "Calculating path...");
+        instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
     }
 
     private void path(int x, int y, int z)
     {
         WorldPoint wp = new WorldPoint(x, y, z);
-        _instructions.register(() -> _pathing.setGoal(wp), "Path to: " + wp);
-        _instructions.register(() -> _pathing.reachedGoal(), "Pathing to: " + wp);
+        instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
+        instructions.register(() -> !pathing.calculatingPath(), 
+            "Calculating path...");
+        instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
     }
 
     private void talk(String name)
     {
-        _instructions.register(() -> _action.interactNPC(name, "Talk-to"),
+        instructions.register(() -> Action.interactNPC(name, "Talk-to"),
                 "Talk to: " + name);
     }
 
     private void trade(String name)
     {
-        _instructions.register(() -> _action.interactNPC(name, "Trade"),
+        instructions.register(() -> Action.interactNPC(name, "Trade"),
                 "Trade: " + name);
     }
 
@@ -1127,13 +979,13 @@ public class Registry {
 
     private void block(int ticks)
     {
-        _instructions.register(() -> _action.block(ticks),
+        instructions.register(() -> Action.block(ticks),
                 "Blocking next instruction: " + ticks + " ticks");
     }
 
     private void debug()
     {
-        _instructions.register(() -> {
+        instructions.register(() -> {
             log.info("Completed last instruction");
             return true; },
             "Debug: Completed last instruction");
@@ -1142,23 +994,23 @@ public class Registry {
     private void interact(String name, String action, int type) {
         switch(type) {
         case TILE_OBJECT:
-            _instructions.register(() ->
+            instructions.register(() ->
                 TileObjectInteraction.interact(name, action),
                 "Tile object interaction: " + action + " " + name);
             break;
         case INVENTORY:
-            _instructions.register(() ->
+            instructions.register(() ->
                 InventoryInteraction.useItem(name, action),
                 "Inventory interaction: " + action + " " + name);
             break;
         case NPC:
-            _instructions.register(() ->
+            instructions.register(() ->
                 NPCInteraction.interact(name, action),
                 "NPC interaction: " + action + " " + name);
             break;
         case TILE_ITEM:
             int a = Integer.valueOf(action);
-            _instructions.register(() -> _action.interactTileItem(name, a),
+            instructions.register(() -> Action.interactTileItem(name, a),
                     "Tile item interaction: " + action + " " + name);
             break;
         default:
@@ -1169,17 +1021,17 @@ public class Registry {
     private void interact(int id, String action, int type) {
         switch(type) {
         case TILE_OBJECT:
-            _instructions.register(() ->
+            instructions.register(() ->
                 TileObjectInteraction.interact(id, action),
                 "Tile object interaction: " + action + " " + id);
             break;
         case INVENTORY:
-            _instructions.register(() ->
+            instructions.register(() ->
                 InventoryInteraction.useItem(id, action),
                 "Inventory interaction: " + action + " " + id);
             break;
         case NPC:
-            _instructions.register(() ->
+            instructions.register(() ->
                 NPCInteraction.interact(id, action),
                 "NPC interaction: " + action + " " + id);
             break;
@@ -1189,21 +1041,18 @@ public class Registry {
         }
     }
 
-    /**        // bush1 = 23635, bush2 = 23625, bush3 = 33183
-        // random select
-        int[] a = {23635, 23625, 33183};
-        int tmp = _rand.nextInt(a.length);
-     * Common dialogue helper macros.
+    /** 
+     a Common dialogue helper macros.
      */
     private void cont()
     {
-        _instructions.register(() -> _action.continueDialogue(),
+        instructions.register(() -> Action.continueDialogue(),
                 "Continue dialogue: 0 times", Optional.empty());
     }
 
     private void cshort()
     {
-        _instructions.register(() -> _action.continueDialogue(),
+        instructions.register(() -> Action.continueDialogue(),
                 "Continue dialogue: " + shortCont + " times",
                 Optional.of(shortCont));
     }
@@ -1212,22 +1061,22 @@ public class Registry {
     {        // bush1 = 23635, bush2 = 23625, bush3 = 33183
         // random select
         int[] a = {23635, 23625, 33183};
-        int tmp = _rand.nextInt(a.length);
-        _instructions.register(() -> _action.continueDialogue(),
+        int tmp = rand.nextInt(a.length);
+        instructions.register(() -> Action.continueDialogue(),
                 "Continue dialogue: " + medCont + " times",
                 Optional.of(medCont));
     }
 
     private void clong()
     {
-        _instructions.register(() -> _action.continueDialogue(),
+        instructions.register(() -> Action.continueDialogue(),
                 "Continue dialogue: " + longCont + " times",
                 Optional.of(longCont));
     }
 
     private void dialogue(String str, int choice)
     {
-        _instructions.register(() -> _action.selectDialogue(str, choice),
+        instructions.register(() -> Action.selectDialogue(str, choice),
                 "Dialogue: " + str + " (" + choice + ")");
     }
 
@@ -1236,7 +1085,7 @@ public class Registry {
      */
     private int rand(int[] a)
     {
-        return a[_rand.nextInt(a.length)];
+        return a[rand.nextInt(a.length)];
     }
 
     /**
@@ -1273,14 +1122,13 @@ public class Registry {
     public int shortWait;
     public int medWait;
     public int longWait;
-    private Random _rand;
+    private Random rand;
 
     /*
      * Plugin Context for the Registry.
      */
     private Map<String, Boolean> _cfg;
-    private Instructions _instructions;
-    private Pathing _pathing;
-    private Action _action;
+    private Instructions instructions;
+    private Pathing pathing;
     private AutoQuesterContext ctx;
 }
