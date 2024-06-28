@@ -17,6 +17,8 @@ package com.aggeplugins.AutoQuester;
 
 import com.aggeplugins.AutoQuester.*;
 import com.aggeplugins.lib.*;
+import com.aggeplugins.MessageBus.*;
+import com.aggeplugins.Skiller.*;
 
 import com.piggyplugins.PiggyUtils.API.*;
 import com.piggyplugins.PiggyUtils.*;
@@ -33,11 +35,13 @@ import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.Client;
 import net.runelite.api.NpcID;
 import net.runelite.api.ObjectID;
+import net.runelite.client.config.*;
 
 import com.example.Packets.*;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.function.BooleanSupplier;
@@ -78,10 +82,81 @@ public class Registry {
         longWait = 50 + this.rand.nextInt(71);
     }
 
+    //private Map<InstructionID, Pair<BooleanSupplier, Instruction> instructionMap 
+    //    = new HashMap<>(
+    //        InstructionID.15_MINING_TIN,
+    //    new Pair<>(
+    //        miningInstruction(),
+    //    new Instruction(
+    //        Mining,
+    //        new WorldPoint(3172, 3364, 0),
+    //        BankLocation.VARROCK_WEST1)
+    //    ))
+
+    //private enum InstructionID {
+    //    15_MINING_TIN,
+    //    20_ATTACK_CHICKENS,
+    //    10_STRENGTH_CHICKENS,
+    //    60_COMBAT_FLESH_CRAWLERS;
+    //}
+
+
+
     // Register all the instructions, these will return TRUE when they should
     // be removed. Then move on to the next instruction.
-    public void testInstructions()
+    
+    public void testInstructions() 
     {
+        //messageBus.send(new Message<MessageID, Instruction>(
+        //    MessageID.REQUEST_SKILLING, 
+
+        //SkillerConfig conf = 
+        //    ctx.plugin.configManager.getConfig(SkillerPlugin.class);
+        //ConfigDescriptor descriptor =
+        //    ctx.plugin.configManager.getConfigDescriptor(conf);
+        //ctx.plugin.configManager.setConfiguration(
+        //    descriptor, "setBank", "VARROCK_EAST");
+        ctx.plugin.configManager.setConfiguration("Skiller", "setBank", "VARROCK_EAST");
+    }
+
+    //private void setConfig(String group, String key, T val)
+    //{
+    //    ctx.plugin.configManager.setConfiguration(group, key, val);
+    //}
+
+    //public void miningInstruction(Instruction instr)
+    //{
+    //    ctx.plugin.configManager.setConfiguration(
+    //        "Skiller", "setBank", instr.getBank().toString());
+    //    ctx.plugin.configManager.setConfiguration(
+    //        "Skiller", "skillingX", instr.getGoal().getX());
+    //    ctx.plugin.configManager.setConfiguration(
+    //        "Skiller", "skillingY", instr.getGoal().getY());
+    //    ctx.plugin.configManager.setConfiguration(
+    //        "Skiller", "skillingZ", instr.getGoal().getPlane());
+    //    ctx.plugin.configManager.setConfiguration(
+    //        "Skiller", "skillingX", instr.getGoal.getX());
+    //    ctx.plugin.configManager.setConfiguration(
+    //        "Skiller", "expectedAction", instr.getTopic());
+
+    //    ctx.plugin.configManager.setConfiguration(
+    //        "Skiller", "expectedAction", instr.getSupplies());
+
+
+    //}
+
+
+
+
+
+
+
+
+
+
+
+    //public void tutorialIsland()
+    //{
         //10747973 // normal dialogue        
 
         //block(longWait);
@@ -276,7 +351,7 @@ public class Registry {
         //clong();
         //block(medWait);
         //cont();
-    }
+    //}
 
     public void xMarksTheSpot()
     {
@@ -379,32 +454,43 @@ public class Registry {
             //block(medWait);
         }                                               // = 21
         
-        //pathDoor(3228, 3246);
+        pathDoor(3212, 3262);
 
         // Go to Lumbridge Castle staircase
-        path(new WorldPoint(3206, 3208, 0));
-        interact(ObjectID.STAIRCASE_16671, "Climb-up", TILE_OBJECT);
-        block(longCont);
+        //path(new WorldPoint(3206, 3208, 0));
+        //interact(ObjectID.STAIRCASE_16671, "Climb-up", TILE_OBJECT);
+        //block(longCont);
 
-        path(new WorldPoint(3209, 3213, 1));
-        interact("Spinning wheel", "Spin", TILE_OBJECT);
+        pathTO(3206, 3208, ObjectID.STAIRCASE_16671, "Climb-up");
+        pathTO(3209, 3213, 1, "Spinning wheel", "Spin");
+        block(minWait);
+        register(() -> Action.pressSpace(ctx.client));
+        register(() -> !Action.isInteractingTO(ctx.client)); // xxx might work
+        block(shortWait); // or Action.isInteractingTO(ctx.client);
 
-        register(() -> Action.pressSpace(ctx.client), null);
-        block(medWait);
+        //path(new WorldPoint(3209, 3213, 1));
+        //interact("Spinning wheel", "Spin", TILE_OBJECT);
+
+        //register(() -> Action.pressSpace(ctx.client), null);
+        //block(medWait);
 
         // Climb-down stairs
-        path(new WorldPoint(3206, 3214, 1));
-        path(new WorldPoint(3205, 3209, 1));
-        interact("Staircase", "Climb-down", TILE_OBJECT);
+        pathTO(3206, 3214, 1, "Staircase", "Climb-down");
+        //path(new WorldPoint(3206, 3214, 1));
+        //path(new WorldPoint(3205, 3209, 1));
+        //interact("Staircase", "Climb-down", TILE_OBJECT);
 
         // Go back to Fred
-        path(new WorldPoint(3190, 3273, 0));
+        path(3190, 3273);
         talk("Fred the Farmer");
 
-        cont();
+        //cont();
+        cshort();
         dialogue("I'm looking for a quest.", 1);
         clong();
+        cmed();
         dialogue("Yes.", 1);
+        clong();
         clong();
     }
 
@@ -1016,6 +1102,30 @@ public class Registry {
         interact(id, action, TILE_OBJECT);
         instructions.register(() -> !Action.isInteractingTO(ctx.client),
                                     action + "ing " + id);
+    }
+    
+    private void pathTO(int x, int y, int z, int id, String action)
+    {
+        path(x, y, z);
+        interact(id, action, TILE_OBJECT);
+        instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                    action + "ing " + id);
+    }
+
+    private void pathTO(int x, int y, String name, String action)
+    {
+        path(x, y);
+        interact(name, action, TILE_OBJECT);
+        instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                    action + "ing " + name);
+    }
+    
+    private void pathTO(int x, int y, int z, String name, String action)
+    {
+        path(x, y, z);
+        interact(name, action, TILE_OBJECT);
+        instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                    action + "ing " + name);
     }
 
     private void talk(String name)

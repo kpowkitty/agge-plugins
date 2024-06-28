@@ -15,6 +15,7 @@ package com.aggeplugins.AutoQuester;
 
 import com.aggeplugins.AutoQuester.*;
 import com.aggeplugins.lib.*;
+import com.aggeplugins.MessageBus.*;
 
 import com.piggyplugins.PiggyUtils.API.PlayerUtil;
 import com.example.Packets.*;
@@ -69,6 +70,8 @@ import java.util.*;
 public class AutoQuesterPlugin extends Plugin {
     @Inject
     public PlayerUtil playerUtil;
+    @Inject
+    public ConfigManager configManager;
 
     @Inject
     private Client client;
@@ -88,6 +91,9 @@ public class AutoQuesterPlugin extends Plugin {
     public ItemManager itemManager;
     @Inject
     private Util util;
+
+    public MessageBus messageBus;
+    public Message<MessageID, ?> msg;
 
     @Provides
     private AutoQuesterConfig getConfig(ConfigManager configManager) {
@@ -113,7 +119,7 @@ public class AutoQuesterPlugin extends Plugin {
         overlayManager.remove(overlay);
         overlayManager.remove(tileOverlay);
 
-        resetEverything();
+        this.finalizer();
     }
 
     // Entry, game logic:
@@ -129,12 +135,12 @@ public class AutoQuesterPlugin extends Plugin {
 
         Action.checkRunEnergy(client);
 
-        _instructions.executeInstructions();
+        instructions.executeInstructions();
             
         // logging
-        log.info("Idle ticks: " + action.getTicks());
-        log.info("Curr idx: " + _instructions.getIdx());
-        log.info("Size: " + _instructions.getSize());
+        //log.info("Idle ticks: " + action.getTicks());
+        log.info("Curr idx: " + instructions.getIdx());
+        log.info("Size: " + instructions.getSize());
         log.info("Curr WorldPoint: " + player.getWorldLocation()); 
     }
 
@@ -182,9 +188,9 @@ public class AutoQuesterPlugin extends Plugin {
      */
     public String getInstructionName()
     {
-        if (_instructions.getSize() == 0)
+        if (instructions.getSize() == 0)
             return "No instructions!";
-        return _instructions.getName();
+        return instructions.getName();
     }
 
     // Public instance variables.
@@ -202,21 +208,24 @@ public class AutoQuesterPlugin extends Plugin {
         initInstance();
         initConfig();
         try {
-            _ctx = new AutoQuesterContext(this, config, client, clientThread,
-                                          _cfg, _instructions);
+            this.ctx = new AutoQuesterContext(this, config, client, 
+                                              clientThread, _cfg, instructions);
         } catch (NullPointerException e) {
             log.info("Error: Could not create plugin Context, objects not initialized correctly");
         }
         //pathing = new Pathing(_ctx);
 
         initRegistry();
+
+        messageBus.send(new Message<MessageID, Boolean>(
+            MessageID.INSTRUCTIONS, true));
     }
 
     private void initClient()
     {   
         try {
-            client = RuneLite.getInjector().getInstance(Client.class);
-            player = client.getLocalPlayer();
+            this.client = RuneLite.getInjector().getInstance(Client.class);
+            this.player = client.getLocalPlayer();
         } catch (NullPointerException e) {
             log.info("Error: Unable to get client instance variables");
         }
@@ -224,17 +233,18 @@ public class AutoQuesterPlugin extends Plugin {
 
     private void initInstance()
     {
+        // Get an instance of the MessageBus.
+        this.messageBus = messageBus.instance();
+
         // Instantiate objects that need clean state.
-        //pathing = new Pathing();
-        _instructions = new Instructions();
-        //action = new Action(2);
+        this.instructions = new Instructions();
 
         //if (pathing == null) {
         //    log.error("Pathing is not initialized properly");
         //    throw new IllegalStateException(
         //        "Pathing is not initialized properly");
         //}
-        if (_instructions == null) {
+        if (this.instructions == null) {
             log.error("Instructions is not initialized properly");
             throw new IllegalStateException(
                 "Instructions is not initialized properly");
@@ -324,7 +334,7 @@ public class AutoQuesterPlugin extends Plugin {
     private void initRegistry()
     {
         // Context guaranteed, SAFE to proceed to Instructions Registry.
-        Registry registry = new Registry(_ctx);
+        Registry registry = new Registry(ctx);
         try {
             if (_cfg.get("Test instructions")) {
                 registry.testInstructions();
@@ -374,42 +384,33 @@ public class AutoQuesterPlugin extends Plugin {
         }
     }
 
-    private void resetEverything()
+    private void finalizer()
     {
-        started = false;
+        this.started = false;
 
         // Release client instance variables.
-        client = null;
-        player = null;
+        this.client = null;
+        this.player = null;
 
         // Release resources for everything and hope garbage collector claims 
         // them.
-        pathing = null;
-        action = null;
         // Instructions should be cleared. @see class Instructions
-        _instructions.clear();
-        _instructions = null;
+        this.instructions.clear();
+        this.instructions = null;
         // SAFE to release Context and Registry.
-        _ctx = null;
-        registry = null;
+        this.ctx = null;
+        this.registry = null;
+
+        // Remove the INSTRUCTIONS Message from the MessageBus, other plugins 
+        // are no longer listening for instructions. null the reference
+        messageBus.remove(MessageID.INSTRUCTIONS);
+        messageBus = null;
+        msg = null; // in case it wasn't
     }
  
     private boolean isStarted()
     {
         return client.getGameState() == GameState.LOGGED_IN || started;
-    }
-
-    private void checkRunEnergy() 
-    {
-        if (runIsOff() && playerUtil.runEnergy() >= 30) {
-            MousePackets.queueClickPacket();
-            WidgetPackets.queueWidgetActionPacket(1, 10485787, -1, -1);
-        }
-    }
-
-    private boolean runIsOff()
-    {
-        return EthanApiPlugin.getClient().getVarpValue(173) == 0;
     }
 
     // Key listeners:
@@ -437,10 +438,10 @@ public class AutoQuesterPlugin extends Plugin {
 
     private void skip() 
     {
-        if (_instructions.getSize() == 0) {
+        if (instructions.getSize() == 0) {
             // do nothing    
         } else {
-            _instructions.skip();
+            instructions.skip();
         }
     }
 
@@ -455,10 +456,8 @@ public class AutoQuesterPlugin extends Plugin {
     //private Random _rand;
 
     // Create null reference pointers for needed utilities.
-    private Pathing pathing;
-    private Instructions _instructions;
-    private Action action;
-    private AutoQuesterContext _ctx;
+    private Instructions instructions;
+    private AutoQuesterContext ctx;
     private Registry registry;
 
     // Local config. Guarantee that every pointer points to this memory address.

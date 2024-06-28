@@ -27,10 +27,10 @@ public class Instruction {
     {
         return this.goal;
     }
-    //public WorldPoint getBank()
-    //{
-    //    return this.bank; // xxx
-    //}
+    public BankLocation getBank()
+    {
+        return this.bank; // xxx
+    }
     public Object getCfg()
     {
         return this.cfg;

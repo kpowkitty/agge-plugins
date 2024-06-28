@@ -11,6 +11,7 @@ public interface SkillerConfig extends Config {
 
     )
     String tickDelaySection = "Tick Delays";
+
     @ConfigSection(
             name = "Drop Config",
             description = "Configuration for amount of items to drop",
@@ -28,7 +29,6 @@ public interface SkillerConfig extends Config {
     default Keybind toggle() {
         return Keybind.NOT_SET;
     }
-
 
     @ConfigItem(
             name = "Should Bank?",
@@ -112,7 +112,7 @@ public interface SkillerConfig extends Config {
 
     @ConfigItem(
             name = "Expected Action",
-            keyName = "Expected Action",
+            keyName = "expectedAction",
             description = "The action you wish to do on the object",
             position = 1
     )
