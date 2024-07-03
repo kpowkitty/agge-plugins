@@ -9,6 +9,7 @@ dependencies {
     compileOnly project(":lib:lib")
     compileOnly project(":lib:MessageBus")
     compileOnly project(":src:Skiller")
+    compileOnly project(":src:Fighter")
 }
 
 sourceSets {

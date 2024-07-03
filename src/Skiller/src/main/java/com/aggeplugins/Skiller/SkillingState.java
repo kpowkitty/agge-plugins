@@ -67,7 +67,15 @@ public class SkillingState extends State {
             ctx.plugin.currState = "SKILLING";
 
             if (Util.hasTools(ctx)) {
-                // xxx timeout
+
+                // Check inventory before skilling, to avoid clicking TileObject
+                // with full inventory.
+                if (Inventory.full()) {
+                    if (ctx.config.shouldBank())
+                        requestPushState(StateID.BANKING);
+                    else
+                        requestPushState(StateID.DROPPING);
+                }
                 
                 // Core action loop:
                 if (ctx.config.searchNpc()) {
@@ -76,15 +84,6 @@ public class SkillingState extends State {
                 } else {
                     if (!findObject())
                         requestPushState(StateID.PATHING);
-                }
-
-                // xxx setTimeout();
-
-                if (Inventory.full()) {
-                    if (ctx.config.shouldBank())
-                        requestPushState(StateID.BANKING);
-                    else
-                        requestPushState(StateID.DROPPING);
                 }
             }
         }

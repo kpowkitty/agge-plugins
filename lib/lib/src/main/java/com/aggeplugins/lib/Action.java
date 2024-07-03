@@ -30,6 +30,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.Skill;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
@@ -204,6 +205,10 @@ public class Action {
         return false;
     }   
 
+    /**
+     * @note The check range is between 30-50, it doesn't start until 30 to
+     * avoid activiating too often.
+     */
     public static void checkRunEnergy(Client client) 
     {
         Random rand = new Random();
@@ -212,6 +217,13 @@ public class Action {
             MousePackets.queueClickPacket();
             WidgetPackets.queueWidgetActionPacket(1, 10485787, -1, -1);
         }
+    }
+
+    public static boolean checkLevelUp(Client client, Skill skill, int level)
+    {
+        if (client.getRealSkillLevel(skill) == level)
+            return true;
+        return false;
     }
 
     public static boolean isInteractingNPC(Client client)
@@ -245,6 +257,12 @@ public class Action {
                                                     .empty() &&
                !TileItems.search().nameContains(name).withinDistance(10)
                                                      .empty();
+    }
+
+    public static boolean isAtLocation(Client client, WorldPoint wp)
+    {   
+        return !EthanApiPlugin.isMoving() && 
+               client.getLocalPlayer().getWorldLocation().equals(wp);
     }
 
     //public static void setMax(int max)

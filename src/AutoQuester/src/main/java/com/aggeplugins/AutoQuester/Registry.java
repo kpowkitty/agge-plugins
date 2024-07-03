@@ -19,6 +19,8 @@ import com.aggeplugins.AutoQuester.*;
 import com.aggeplugins.lib.*;
 import com.aggeplugins.MessageBus.*;
 import com.aggeplugins.Skiller.*;
+import com.aggeplugins.Fighter.*;
+import com.aggeplugins.lib.BooleanState.*;
 
 import com.piggyplugins.PiggyUtils.API.*;
 import com.piggyplugins.PiggyUtils.*;
@@ -36,16 +38,18 @@ import net.runelite.api.Client;
 import net.runelite.api.NpcID;
 import net.runelite.api.ObjectID;
 import net.runelite.client.config.*;
+import net.runelite.api.Skill;
 
-import com.example.Packets.*;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 @Slf4j
 public class Registry {
@@ -60,7 +64,6 @@ public class Registry {
         this.ctx = ctx;
 
         // Instance context.
-        _cfg = ctx.cfg;
         this.instructions = ctx.instructions;
         this.pathing = new Pathing(this.ctx);
         this.pathing.setType(Pathing.Type.SHORTEST_PATH);
@@ -82,280 +85,1095 @@ public class Registry {
         longWait = 50 + this.rand.nextInt(71);
     }
 
-    //private Map<InstructionID, Pair<BooleanSupplier, Instruction> instructionMap 
-    //    = new HashMap<>(
-    //        InstructionID.15_MINING_TIN,
-    //    new Pair<>(
-    //        miningInstruction(),
-    //    new Instruction(
-    //        Mining,
-    //        new WorldPoint(3172, 3364, 0),
-    //        BankLocation.VARROCK_WEST1)
-    //    ))
-
-    //private enum InstructionID {
-    //    15_MINING_TIN,
-    //    20_ATTACK_CHICKENS,
-    //    10_STRENGTH_CHICKENS,
-    //    60_COMBAT_FLESH_CRAWLERS;
-    //}
-
-
-
-    // Register all the instructions, these will return TRUE when they should
-    // be removed. Then move on to the next instruction.
-    
-    public void testInstructions() 
-    {
-        //messageBus.send(new Message<MessageID, Instruction>(
-        //    MessageID.REQUEST_SKILLING, 
-
-        //SkillerConfig conf = 
-        //    ctx.plugin.configManager.getConfig(SkillerPlugin.class);
-        //ConfigDescriptor descriptor =
-        //    ctx.plugin.configManager.getConfigDescriptor(conf);
-        //ctx.plugin.configManager.setConfiguration(
-        //    descriptor, "setBank", "VARROCK_EAST");
-        ctx.plugin.configManager.setConfiguration("Skiller", "setBank", "VARROCK_EAST");
+    /**
+     * @enum InstructionID
+     * InstructionID enumeration for Instruction sets (the Instruction map).
+     */
+    private enum InstructionID {
+        MINING_TIN,
+        WOODCUTTING_TREE,
+        FISHING_SHRIMP,
+        MINING_IRON_MITHRIL,
+        MINING_IRON_ADAMANT,
+        MINING_IRON,
+        WOODCUTTING_OAK,
+        WOODCUTTING_WILLOW_ADAMANT,
+        WOODCUTTING_WILLOW,
+        ATTACK_CHICKEN,
+        STRENGTH_CHICKEN,
+        DEFENCE_CHICKEN,
+        ATTACK_COW_MITHRIL,
+        STRENGTH_COW_MITHRIL,
+        DEFENCE_COW_MITHRIL,
+        ATTACK_COW_ADAMANT,
+        STRENGTH_COW_ADAMANT,
+        DEFENCE_COW_ADAMANT,
+        MAGIC_CHICKEN,
+        MAGIC_COW,
+        RANGED_CHICKEN,
+        RANGED_COW_WILLOW,
+        RANGED_COW_MAPLE,
+        COMBAT_FLESH_CRAWLER;
     }
 
-    //private void setConfig(String group, String key, T val)
-    //{
-    //    ctx.plugin.configManager.setConfiguration(group, key, val);
-    //}
+    /**
+     * Functions to shuffle Instruction map keys to randomize Instruction sets.
+     */
+    private List<InstructionID> bronzeShuffle()
+    {
+        List<InstructionID> keys = new ArrayList<>();
+        keys.add(InstructionID.MINING_TIN);
+        keys.add(InstructionID.WOODCUTTING_TREE);
+        keys.add(InstructionID.FISHING_SHRIMP);
 
-    //public void miningInstruction(Instruction instr)
-    //{
-    //    ctx.plugin.configManager.setConfiguration(
-    //        "Skiller", "setBank", instr.getBank().toString());
-    //    ctx.plugin.configManager.setConfiguration(
-    //        "Skiller", "skillingX", instr.getGoal().getX());
-    //    ctx.plugin.configManager.setConfiguration(
-    //        "Skiller", "skillingY", instr.getGoal().getY());
-    //    ctx.plugin.configManager.setConfiguration(
-    //        "Skiller", "skillingZ", instr.getGoal().getPlane());
-    //    ctx.plugin.configManager.setConfiguration(
-    //        "Skiller", "skillingX", instr.getGoal.getX());
-    //    ctx.plugin.configManager.setConfiguration(
-    //        "Skiller", "expectedAction", instr.getTopic());
+        // Do all combat if one's chosen, index and add.
+        keys.add(InstructionID.STRENGTH_CHICKEN);
 
-    //    ctx.plugin.configManager.setConfiguration(
-    //        "Skiller", "expectedAction", instr.getSupplies());
+        Collections.shuffle(keys);
+
+        int idx = keys.indexOf(InstructionID.STRENGTH_CHICKEN);
+        keys.add(idx + 1, InstructionID.ATTACK_CHICKEN);
+        keys.add(idx + 2, InstructionID.DEFENCE_CHICKEN);
+
+        return keys;
+    }
+
+    private List<InstructionID> mithrilShuffle()
+    {
+        List<InstructionID> keys = new ArrayList<>();
+        keys.add(InstructionID.MINING_IRON_MITHRIL);
+        keys.add(InstructionID.WOODCUTTING_OAK);
+        //keys.add(InstructionID.FISHING_SHRIMP); // xxx fishing task
+        
+        // Do all combat if one's chosen, index and add.
+        keys.add(InstructionID.STRENGTH_COW_MITHRIL);
+
+        Collections.shuffle(keys);
+
+        int idx = keys.indexOf(InstructionID.STRENGTH_COW_MITHRIL);
+        keys.add(idx + 1, InstructionID.ATTACK_COW_MITHRIL);
+        keys.add(idx + 2, InstructionID.DEFENCE_COW_MITHRIL);
+
+        return keys;
+    }
+
+    private List<InstructionID> adamantShuffle()
+    {
+        List<InstructionID> keys = new ArrayList<>();
+        keys.add(InstructionID.MINING_IRON_ADAMANT);
+        keys.add(InstructionID.WOODCUTTING_WILLOW_ADAMANT);
+        //keys.add(InstructionID.FISHING_SHRIMP); // xxx fishing task
+
+        // Do all combat if one's chosen, index and add.
+        keys.add(InstructionID.STRENGTH_COW_ADAMANT);
+
+        Collections.shuffle(keys);
+
+        int idx = keys.indexOf(InstructionID.STRENGTH_COW_ADAMANT);
+        keys.add(idx + 1, InstructionID.ATTACK_COW_ADAMANT);
+        keys.add(idx + 2, InstructionID.DEFENCE_COW_ADAMANT);
+
+        return keys;
+    }
+
+    private List<InstructionID> runeShuffle()
+    {
+        List<InstructionID> keys = new ArrayList<>();
+        keys.add(InstructionID.MINING_IRON);
+        keys.add(InstructionID.WOODCUTTING_WILLOW);
+        //keys.add(InstructionID.FISHING_SHRIMP); // xxx fishing task
+        
+        // Do all combat if one's chosen, index and add.
+        // xxx combat for rune
+        //keys.add(InstructionID.STRENGTH_CHICKEN);
+
+        Collections.shuffle(keys);
+
+        //int idx = keys.indexOf(InstructionID.STRENGTH_CHICKEN);
+        //keys.add(idx + 1, InstructionID.ATTACK_CHICKEN);
+        //keys.add(idx + 2, InstructionID.DEFENCE_CHICKEN);
+
+        return keys;
+    }
+
+    /**
+     * The Instruction map.
+     */
+    private Map<InstructionID, 
+                Pair<BiConsumer<InstructionID, Instruction>, Instruction>> 
+            instructionMap = new HashMap<>() {{
+
+            put(InstructionID.MINING_TIN,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Mine",
+                    new WorldPoint(3172, 3364, 0),
+                    BankLocation.VARROCK_WEST1,
+                    new HashMap<>() {{
+                        put("TileObject",   "Tin rocks");
+                        put("Items",        "Bronze pickaxe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.MINING, 21)
+            )));
+
+            put(InstructionID.WOODCUTTING_TREE,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Chop down",
+                    new WorldPoint(2953, 3407, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("TileObject",   "Tree");
+                        put("Items",        "Bronze axe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.WOODCUTTING, 21)
+            )));
+
+            put(InstructionID.FISHING_SHRIMP,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Net",
+                    new WorldPoint(3245, 3155, 0),
+                    null, // no bank location
+                    new HashMap<>() {{
+                        put("TileObject",   "Fishing spot");
+                        put("Items",        "Small fishing net");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "FALSE");
+                        put("SearchNPC",    "TRUE");
+                    }},
+                    Pair.of(Skill.FISHING, 20)
+            )));
+
+            put(InstructionID.MINING_IRON_MITHRIL,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Mine",
+                    new WorldPoint(3287, 3367, 0), // varrock east mine
+                    BankLocation.VARROCK_EAST,
+                    new HashMap<>() {{
+                        put("TileObject",   "Iron rocks");
+                        put("Items",        "Mithril pickaxe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.MINING, 31)
+            )));
+
+            put(InstructionID.MINING_IRON_ADAMANT,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Mine",
+                    new WorldPoint(3187, 3367, 0),
+                    BankLocation.VARROCK_EAST,
+                    new HashMap<>() {{
+                        put("TileObject",   "Iron rocks");
+                        put("Items",        "Adamant pickaxe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.MINING, 41)
+            )));
+
+            put(InstructionID.MINING_IRON,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Mine",
+                    new WorldPoint(2970, 3238, 0), // rimmington mine
+                    BankLocation.DRAYNOR,
+                    new HashMap<>() {{
+                        put("TileObject",   "Iron rocks");
+                        put("Items",        "Rune pickaxe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.MINING, 50)
+            )));
+
+            put(InstructionID.WOODCUTTING_OAK,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Chop down",
+                    new WorldPoint(3110, 3253, 0),
+                    BankLocation.DRAYNOR,
+                    new HashMap<>() {{
+                        put("TileObject",   "Oak tree");
+                        put("Items",        "Mithril axe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.WOODCUTTING, 31)
+            )));
+
+            put(InstructionID.WOODCUTTING_WILLOW_ADAMANT,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Chop down",
+                    new WorldPoint(3087, 3236, 0),
+                    BankLocation.DRAYNOR,
+                    new HashMap<>() {{
+                        put("TileObject",   "Willow tree");
+                        put("Items",        "Adamant axe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.WOODCUTTING, 41)
+            )));
+
+            put(InstructionID.WOODCUTTING_WILLOW,
+            Pair.of(
+                (id, instr) -> skillerInstruction(id, instr), 
+                new Instruction(
+                    "Chop down",
+                    new WorldPoint(3087, 3236, 0),
+                    BankLocation.DRAYNOR,
+                    new HashMap<>() {{
+                        put("TileObject",   "Willow tree");
+                        put("Items",        "Rune axe");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "TRUE");
+                        put("SearchNPC",    "FALSE");
+                    }},
+                    Pair.of(Skill.WOODCUTTING, 50)
+            )));
+
+            put(InstructionID.STRENGTH_CHICKEN,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Strength",
+                    new WorldPoint(3033, 3287, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Chicken");
+                        put("Items",        "Bronze sword");
+                        put("Loot",         "Bones,Feather");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.STRENGTH, 15)
+            )));
+
+            put(InstructionID.ATTACK_CHICKEN,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Attack",
+                    new WorldPoint(3033, 3287, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Chicken");
+                        put("Items",        "Bronze sword");
+                        put("Loot",         "Bones,Feather");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.ATTACK, 20)
+            )));
+
+            put(InstructionID.DEFENCE_CHICKEN,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Defence",
+                    new WorldPoint(3033, 3287, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Chicken");
+                        put("Items",        "Bronze sword");
+                        put("Loot",         "Bones,Feather");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.DEFENCE, 10)
+            )));
+
+            put(InstructionID.STRENGTH_COW_MITHRIL,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Strength",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+
+                        put("Items",        "Mithril scimitar, " +
+                                            "Steel full helm, " +
+                                            "Steel kiteshield, " +
+                                            "Steel platelegs, " +
+                                            "Steel platebody, " +
+                                            "Amulet of power, " +
+                                            "Black cape, Leather boots, " +
+                                            "Leather gloves");
+
+                        put("Items",        "Bronze sword");
+                        put("Loot",         "Bones");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.STRENGTH, 30)
+            )));
+
+            put(InstructionID.ATTACK_COW_MITHRIL,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Attack",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+
+                        put("Items",        "Mithril scimitar, " +
+                                            "Steel full helm, " +
+                                            "Steel kiteshield, " +
+                                            "Steel platelegs, " +
+                                            "Steel platebody, " +
+                                            "Amulet of power, " +
+                                            "Black cape, Leather boots, " +
+                                            "Leather gloves");
+
+                        put("Loot",         "Bones");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.ATTACK, 30)
+            )));
+
+            put(InstructionID.DEFENCE_COW_MITHRIL,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Defence",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+                        put("Loot",         "Bones");
+
+                        put("Items",        "Mithril scimitar, " +
+                                            "Steel full helm, " +
+                                            "Steel kiteshield, " +
+                                            "Steel platelegs, " +
+                                            "Steel platebody, " +
+                                            "Amulet of power, " +
+                                            "Black cape, Leather boots, " +
+                                            "Leather gloves");
+
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.DEFENCE, 20)
+            )));
+
+            put(InstructionID.STRENGTH_COW_ADAMANT,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Strength",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+
+                        put("Items",        "Adamant scimitar, " +
+                                            "Mithril full helm, " +
+                                            "Mithril kiteshield, " +
+                                            "Mithril platelegs, " +
+                                            "Mithril platebody, " +
+                                            "Amulet of power, Black cape, " + 
+                                            "Leather boots, Leather gloves");
+
+                        put("Loot",         "Bones");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.STRENGTH, 40)
+            )));
+
+            put(InstructionID.ATTACK_COW_ADAMANT,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Attack",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+
+                        put("Items",        "Adamant scimitar, " +
+                                            "Mithril full helm, " +
+                                            "Mithril kiteshield, " +
+                                            "Mithril platelegs, " +
+                                            "Mithril platebody, " +
+                                            "Amulet of power, Black cape, " +
+                                            "Leather boots, Leather gloves");
+                        
+                        put("Loot",         "Bones");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.ATTACK, 40)
+            )));
+
+            put(InstructionID.DEFENCE_COW_ADAMANT,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Defence",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+
+                        put("Items",        "Adamant scimitar, " +
+                                            "Mithril full helm, " +
+                                            "Mithril kiteshield, " +
+                                            "Mithril platelegs, " +
+                                            "Mithril platebody, " +
+                                            "Amulet of power, Black cape, " +
+                                            "Leather boots, Leather gloves");
+                        
+                        put("Loot",         "Bones");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.DEFENCE, 30)
+            )));
+
+            put(InstructionID.MAGIC_CHICKEN,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Magic",
+                    new WorldPoint(3033, 3287, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Chicken");
+
+                        put("Items",        "Staff of air, Amulet of power, " +
+                                            "Blue wizard robe, " +
+                                            "Blue wizard hat, " +
+                                            "Blue skirt, Leather boots, " +
+                                            "Leather gloves, Black cape");
+
+                        put("Loot",         "Bones,Feather");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.MAGIC, 13)
+            )));
+
+            put(InstructionID.MAGIC_COW,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Magic",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+                        put("Loot",         "Bones");
+
+                        put("Items",        "Staff of fire, Amulet of power, " +
+                                            "Blue wizard robe, " +
+                                            "Blue wizard hat, " +
+                                            "Blue skirt, Leather boots, " +
+                                            "Leather gloves, Black cape");
+
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.MAGIC, 55)
+            )));
+
+            put(InstructionID.RANGED_CHICKEN,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Ranged",
+                    new WorldPoint(3033, 3287, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Chicken");
+
+                        put("Items",        "Leather cowl, Amulet of power, " +
+                                            "Hardleather body, " +
+                                            "Leather chaps, " +
+                                            "Shortbow, Bronze arrow, " +
+                                            "Leather boots, " +
+                                            "Leather vambraces, " +
+                                            "Black cape");
+                                            // xxx oak shortbow?
+
+                        put("Loot",         "Bones,Feather");
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.RANGED, 20)
+            )));
+
+            put(InstructionID.RANGED_COW_WILLOW,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Ranged",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+                        put("Loot",         "Bones");
+
+                        put("Items",        "Coif, Amulet of power, " +
+                                            "Studded body, Studded chaps, " +
+                                            "Willow shortbow, Mithril arrow, " +
+                                            "Leather boots, " +
+                                            "Leather vambraces, " +
+                                            "Black cape");
+
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.RANGED, 30)
+            )));
+            
+            put(InstructionID.RANGED_COW_MAPLE,
+            Pair.of(
+                (id, instr) -> fighterInstruction(id, instr), 
+                new Instruction(
+                    "Ranged",
+                    new WorldPoint(3031, 3036, 0),
+                    BankLocation.FALADOR_WEST,
+                    new HashMap<>() {{
+                        put("NPC",          "Cow");
+                        put("Loot",         "Bones");
+
+                        put("Items",        "Coif, Amulet of power, " +
+                                            "Studded body, Studded chaps, " +
+                                            "Maple shortbow, Mithril arrow, " +
+                                            "Leather boots, " +
+                                            "Leather vambraces, " +
+                                            "Black cape");
+
+                        put("ShouldLoot",   "TRUE");
+                        put("BuryBones",    "TRUE");
+                    }},
+                    Pair.of(Skill.RANGED, 50)
+            )));  
+
+            }};
+
+    public void sendInstructionMessage(MessageID id, Pair<Skill, Integer> level)
+    {
+        ctx.plugin.messageBus.send(new Message<MessageID, Pair>(id, level));
+    }
+
+    public void waitInstructionMessage(MessageID id, String name)
+    {
+        instructions.register(() -> ctx.plugin.messageBus.query(id), name);
+    }
+
+    public void skillerInstruction(InstructionID id, Instruction instr)
+    {
+        /* GENERAL GOES HERE: */
+        List<String> list = LibUtil.stringToList(instr.getInfo().get("Items"));
+        List<Integer> items = new ArrayList<>();
+        for (String str : list) {
+            items.add(LibUtil.stringToItemId(str));
+        }
+
+        path(instr.getBank().getWorldArea().toWorldPoint());
+
+        // Unequip any old/invalid items.
+        instructions.register(new BooleanEquippingState(items)::run,
+                              "Unequipping items"
+        );
+
+        instructions.register(new BooleanBankingState(items)::run,
+                              "Getting items"
+        );
+
+        // Equip new items for Skiller task.
+        instructions.register(new BooleanEquippingState(items)::run,
+                              "Equipping items"
+        );
+
+        skillerSetup(instr);
+
+        /* SPECIFIC GOES HERE: */
+        switch(id) {
+        case MINING_TIN:
+        case WOODCUTTING_TREE:
+        case MINING_IRON_MITHRIL:
+        case MINING_IRON_ADAMANT:
+        case MINING_IRON:
+        case WOODCUTTING_OAK:
+        case WOODCUTTING_WILLOW_ADAMANT:
+        case WOODCUTTING_WILLOW:
+            break;
+        case FISHING_SHRIMP:
+            // xxx path to lumbridge bank
+            goLumbridgeBank();
+            break;
+        default:
+            break;
+        }
+        
+        /* FINALIZE: RELEASE CONTROL, AND WAIT FOR CONTROL AGAIN */
+        sendInstructionMessage(MessageID.REQUEST_SKILLING, instr.getLevel());
+        waitInstructionMessage(MessageID.DONE_SKILLING, 
+            instr.getTask() + " " + instr.getInfo().get("TileObject"));
+    }
+
+    public void fighterInstruction(InstructionID id, Instruction instr)
+    {
+        switch(instr.getTask()) {
+        case "Strength":
+            List<String> list = LibUtil.stringToList(instr.getInfo()
+                                                          .get("Items"));
+            List<Integer> items = new ArrayList<>();
+            for (String str : list) {
+                items.add(LibUtil.stringToItemId(str));
+            }
+
+            path(instr.getBank().getWorldArea().toWorldPoint());
+
+            instructions.register(new BooleanBankingState(items)::run,
+                                  "Getting items"
+            );
+
+            // Equip items and unequip any old items.
+            instructions.register(new BooleanEquippingState(items)::run,
+                                  "Equipping items"
+            );
+
+            // Bank any remaining undesired items.
+            instructions.register(new BooleanBankingState(items)::run,
+                                  "Banking old items"
+            );
+
+            // Change attack style to strength.
+            instructions.register(() -> AttackStyleUtil.changeAttackStyle(
+                AttackStyle.AGGRESSIVE),
+                "Changing to aggressive"
+            );
+
+            // Finally, path to location and (after) send control to Fighter.
+            path(instr.getLocation());
+            break;
+        case "Attack":
+            // Strength always comes before, it did a lot of setup -- expect 
+            // that.
+            // Change attack style.
+            instructions.register(() -> AttackStyleUtil.changeAttackStyle(
+                AttackStyle.ACCURATE),
+                "Changing to accurate"
+            );
+            // Everything else is taken care of, give control back to Fighter.
+            break;
+        case "Defence":
+            // Same as attack.
+            instructions.register(() -> AttackStyleUtil.changeAttackStyle(
+                AttackStyle.DEFENSIVE),
+                "Changing to defensive"
+            );
+            break;
+        default:
+            // xxx no default
+            break;
+        }
+
+        fighterSetup(instr);
+
+        sendInstructionMessage(MessageID.REQUEST_FIGHTING, instr.getLevel());
+
+        // xxx maybe change instruction name to InstructionID
+        waitInstructionMessage(MessageID.DONE_FIGHTING, 
+            instr.getTask() + " training " + instr.getInfo().get("NPC") + "s");
+    }
+
+    public void fighterSetup(Instruction instr)
+    {
+        try {
+            ctx.plugin.configManager.setConfiguration(
+                "Fighter", "npcTarget", instr.getInfo().get("NPC"));
+            ctx.plugin.configManager.setConfiguration(
+                "Fighter", "loot", instr.getInfo().get("Loot"));
+            if ("TRUE".equals(instr.getInfo().get("ShouldLoot"))) {
+                ctx.plugin.configManager.setConfiguration(
+                    "Fighter", "shouldLoot", true);
+            } else {
+                ctx.plugin.configManager.setConfiguration(
+                    "Fighter", "shouldLoot", false);
+            }
+            if ("TRUE".equals(instr.getInfo().get("BuryBones"))) {
+                ctx.plugin.configManager.setConfiguration(
+                    "Fighter", "buryBones", true);
+            } else {
+                ctx.plugin.configManager.setConfiguration(
+                    "Fighter", "buryBones", false);
+            }
+        } catch (NullPointerException e) {
+            log.info(instr.getTask() + " Instruction setup failed!");
+        }
+    }
+
+    public void skillerSetup(Instruction instr)
+    {
+        try {
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "skillingX", instr.getLocation().getX());
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "skillingY", instr.getLocation().getY());
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "skillingZ", instr.getLocation().getPlane());
+
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "setBank", instr.getBank().toString());
+
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "expectedAction", instr.getTask());
+
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "objectToInteract", instr.getInfo()
+                                                    .get("TileObject"));
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "toolsToUse", instr.getInfo().get("Items"));
+            ctx.plugin.configManager.setConfiguration(
+                "Skiller", "itemToKeep", instr.getInfo().get("KeepItems"));
+            if ("TRUE".equals(instr.getInfo().get("ShouldBank"))) {
+                log.info("Skiller should bank (TRUE)");
+                ctx.plugin.configManager.setConfiguration(
+                    "Skiller", "shouldBank", true);
+            } else {
+                ctx.plugin.configManager.setConfiguration(
+                    "Skiller", "shouldBank", false);
+            }
+            if ("TRUE".equals(instr.getInfo().get("SearchNPC"))) {
+                ctx.plugin.configManager.setConfiguration(
+                    "Skiller", "searchNpc", true);
+            } else {
+                ctx.plugin.configManager.setConfiguration(
+                    "Skiller", "searchNpc", false);
+            }
+        } catch (NullPointerException e) {
+            log.info(instr.getTask() + " " + instr.getInfo().get("TileObject") + " Instruction setup failed!");
+        }
+    }
+
+    public void bronzeInstructions()
+    {
+        List<InstructionID> keys = bronzeShuffle();
+        for (InstructionID key : keys) {
+            instructionMap.get(key).getLeft().accept(
+                key, instructionMap.get(key).getRight());
+        }
+
+        // After finishing bronze instructions, buy mithril.
+        buyMithril();
+    }
+
+    public void buyMithril()
+    {
+       // Sell item IDs.
+        List<Integer> items = new ArrayList<Integer>(Arrays.asList(
+            ItemID.LOGS,                ItemID.BRONZE_AXE,
+            ItemID.BRONZE_PICKAXE,      ItemID.BRONZE_SWORD,
+            ItemID.WOODEN_SHIELD,       ItemID.BREAD,
+            ItemID.BRONZE_DAGGER       
+            //ItemID.SMALL_FISHING_NET
+        ));
+
+        path(BankLocation.GRAND_EXCHANGE.getWp());
+            
+        instructions.register(new BooleanBankingState(items)::run,
+                              "Withdrawing sell items"
+        );
+
+        instructions.register(new BooleanGEState(
+            Pair.of(
+            Triple.of(
+                // Item IDs.
+                new ArrayList<Integer>(Arrays.asList(
+                    ItemID.MITHRIL_AXE,         ItemID.MITHRIL_PICKAXE, 
+                    ItemID.MITHRIL_SCIMITAR,    ItemID.STEEL_FULL_HELM,
+                    ItemID.STEEL_KITESHIELD,    ItemID.STEEL_PLATELEGS,
+                    ItemID.STEEL_PLATEBODY,     ItemID.AMULET_OF_POWER,
+                    ItemID.BLACK_CAPE,          ItemID.LEATHER_BOOTS,
+                    ItemID.LEATHER_GLOVES
+                )),
+                // Price mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    500,                        1000, 
+                    500,                        1000,
+                    500,                        1000,
+                    500,                        3000,
+                    500,                        100,
+                    100
+                )),
+                // Amount mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    1,                          1, 
+                    1,                          1,
+                    1,                          1,
+                    1,                          1,
+                    1,                          1,
+                    1
+                ))),
+            Pair.of(  
+                // Item IDs.
+                items,
+                // Price mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    1,                          1,
+                    1,                          1,
+                    1,                          1,
+                    1
+                    //ItemID.SMALL_FISHING_NET
+                )))
+            ))::run,
+            "Using GE"
+        );
+
+        instructions.register(new BooleanBankingState(null)::run, 
+                              "Depositing all items"
+        );
+    }
+
+    public void mithrilInstructions()
+    {
+        List<InstructionID> keys = mithrilShuffle();
+        for (InstructionID key : keys) {
+            instructionMap.get(key).getLeft().accept(
+                key, instructionMap.get(key).getRight());
+        }
+
+        // After finishing mithril instructions, buy adamant.
+        buyAdamant();
+    }
+
+    public void buyAdamant()
+    {
+        // Sell item IDs.
+        List<Integer> items = new ArrayList<Integer>(Arrays.asList(
+            ItemID.MITHRIL_AXE,         ItemID.MITHRIL_PICKAXE, 
+            ItemID.MITHRIL_SCIMITAR,    ItemID.STEEL_FULL_HELM,
+            ItemID.STEEL_KITESHIELD,    ItemID.STEEL_PLATELEGS,
+            ItemID.STEEL_PLATEBODY
+        ));
+
+        path(BankLocation.GRAND_EXCHANGE.getWp());
+            
+        instructions.register(new BooleanBankingState(items)::run,
+                              "Withdrawing sell items"
+        );
+
+        instructions.register(new BooleanGEState(
+            Pair.of(
+            Triple.of(
+                // Item IDs.
+                new ArrayList<Integer>(Arrays.asList(
+                    ItemID.ADAMANT_AXE,         ItemID.ADAMANT_PICKAXE, 
+                    ItemID.ADAMANT_SCIMITAR,    ItemID.MITHRIL_FULL_HELM,
+                    ItemID.MITHRIL_KITESHIELD,  ItemID.MITHRIL_PLATELEGS,
+                    ItemID.MITHRIL_PLATEBODY
+                )),
+                // Price mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    1000,                       2000, 
+                    2000,                       1000,
+                    2000,                       2000,
+                    3500                     
+                )),
+                // Amount mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    1,                          1, 
+                    1,                          1,
+                    1,                          1,
+                    1
+                ))),
+            Pair.of(  
+                // Item IDs.
+                items,
+                // Price mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    1,                          1,
+                    1,                          1,
+                    1,                          1,
+                    1
+                    //ItemID.SMALL_FISHING_NET
+                )))
+            ))::run,
+            "Using GE"
+        );
+
+        instructions.register(new BooleanBankingState(null)::run, 
+                              "Depositing all items"
+        );
+    }
+
+    public void buyMagic()
+    {
+        path(BankLocation.GRAND_EXCHANGE.getWp());
+
+        // Items as mapped to Fighter:
+        //put("Items",        "Staff of air, Amulet of power, 
+        //                     Blue wizard robe, Blue wizard hat, 
+        //                     Blue skirt, Leather boots, 
+        //                     Leather gloves, Black cape");
+        
+        instructions.register(new BooleanGEBuyState(
+            Triple.of(
+                // Item IDs.
+                new ArrayList<Integer>(Arrays.asList(
+                    ItemID.STAFF_OF_AIR,        ItemID.STAFF_OF_FIRE, 
+                    ItemID.BLUE_WIZARD_ROBE,    ItemID.BLUE_WIZARD_HAT,
+                    ItemID.BLUE_SKIRT,          ItemID.MIND_RUNE,
+                    ItemID.AIR_RUNE
+                )),
+                // Price mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    3000,                       3000, 
+                    3000,                       1000,
+                    500,                        4,
+                    6                     
+                )),
+                // Amount mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    1,                          1, 
+                    1,                          1,
+                    // 500 mind runes for wind strike, 17500 left for fire
+                    // strike; 17500 * 2 = amt of air runes to buy
+                    1,                          15500,
+                    // Max for air runes is 30k, buy 15.5k mind runes (see 
+                    // above)
+                    30000
+                )))
+            )::run,
+            "Using GE"
+        );
+
+        instructions.register(new BooleanBankingState(null)::run, 
+                              "Depositing all items"
+        );
+    }
+
+    public void buyRanged()
+    {
+        path(BankLocation.GRAND_EXCHANGE.getWp());
+
+        // Items as mapped to Fighter:
+        //"Leather cowl, Amulet of power, 
+        // Hardleather body, Leather chaps, 
+        // Shortbow, Bronze arrow, 
+        // Leather boots, Leather vambraces, 
+        // Black cape"
+        //"Coif, Amulet of power, 
+        // Studded body, Studded chaps, 
+        // Willow shortbow, Mithril arrow,
+        // Leather boots, Leather vambraces, 
+        // Black cape"
+        //"Maple shortbow"
+    
+        instructions.register(new BooleanGEBuyState(
+            Triple.of(
+                // Item IDs.
+                new ArrayList<Integer>(Arrays.asList(
+                    ItemID.LEATHER_COWL,        ItemID.HARDLEATHER_BODY, 
+                    ItemID.LEATHER_CHAPS,       ItemID.LEATHER_VAMBRACES,
+                    ItemID.COIF,                ItemID.STUDDED_BODY,
+                    ItemID.STUDDED_CHAPS,       ItemID.WILLOW_SHORTBOW,
+                    ItemID.MAPLE_SHORTBOW,      ItemID.BRONZE_ARROW,
+                    ItemID.MITHRIL_ARROW
+                )),
+                // Price mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    100,                        100, 
+                    100,                        250,
+                    250,                        500,
+                    750,                        100,
+                    // xxx consistent price for bronze arrow, that's not too 
+                    // high? -- want a good price
+                    250,                        4,
+                    // xxx same for mithril arrow
+                    5
+                )),
+                // Amount mapped to each Item ID.
+                new ArrayList<Integer>(Arrays.asList(
+                    1,                          1, 
+                    1,                          1,
+                    1,                          1,
+                    1,                          1,
+                    // xxx how many bronze arrow?
+                    1,                          1000,
+                    // xxx might need to restock of mithril arrow
+                    7000
+                )))
+            )::run,
+            "Using GE"
+        );
+
+        instructions.register(new BooleanBankingState(null)::run, 
+                              "Depositing all items"
+        );
+    }
+
+    public void adamantInstructions()
+    {
+        List<InstructionID> keys = adamantShuffle();
+        for (InstructionID key : keys) {
+            instructionMap.get(key).getLeft().accept(
+                key, instructionMap.get(key).getRight());
+        }
+    }
+
+    public void buyRune()
+    {
+        // xxx need to buy rune
+    }
+
+    public void runeInstructions()
+    {
+        List<InstructionID> keys = runeShuffle();
+        for (InstructionID key : keys) {
+            instructionMap.get(key).getLeft().accept(
+                key, instructionMap.get(key).getRight());
+        }
+    }
+            
+    // Register all the instructions, these will return TRUE when they should
+    // be removed. Then move on to the next instruction.
+    public void testInstructions()
+    {
+        //register(() -> AttackStyleUtil.changeAttackStyle(AttackStyle.ACCURATE));
+        //block(1000000);
 
 
-    //}
-
-
-
-
-
-
-
-
-
-
-
-    //public void tutorialIsland()
-    //{
-        //10747973 // normal dialogue        
-
-        //block(longWait);
-
-        //interact("Fishing spot", "Net", TILE_OBJECT);
-        //block(shortWait);
-
-        //// xxx widget
-        //block(longWait); 
-        //
-        //block(medCont);
-
-        //talk("Survival Expert");
-        //cshort();
-
-        //interact("Tree", "Chop down", TILE_OBJECT);
-        //block(shortWait);
-
-        //interact("Logs", "Use", INVENTORY);
-        //interact("Tinderbox", "Use", INVENTORY);
-        //block(shortWait);
-
-        //interact("Raw shrimps", "Use", INVENTORY);
-        //interact("Fire", "Use", TILE_OBJECT);
-        //block(shortWait);
-
-        //path(3090, 3092);
-        //interact("Gate", "Open", TILE_OBJECT);
-        //block(shortCont);
-
-        //path(3079, 3084);
-        //interact("Door", "Open", TILE_OBJECT);
-        //block(shortWait);
-
-        //talk("Master Chef");
-        //cshort();
-
-        //interact("Pot of flour", "Use", INVENTORY);
-        //interact("Bucket of water", "Use", INVENTORY);
-        //interact("Bread dough", "Use", INVENTORY);
-        //interact("Range", "Use", TILE_OBJECT);
-        //block(shortWait);
-
-        //path(3073, 3090);
-        //block(shortCont);
-
-        //path(3086, 3124);
-        //interact("Door", "Open", TILE_OBJECT);
-        //block(shortCont);
-        //talk("Quest Guide");
-        //cont();
-
-        //// widget
-        //block(longWait);
-        //
-        //talk("Quest Guide");
-        //cmed();
-        //interact("Ladder", "Climb-down", TILE_OBJECT);
-        //block(shortWait);
-
-        //talk("Mining Instructor");
-        //cmed();
-
-        //interact("Tin rocks", "Mine", TILE_OBJECT);
-        //block(medWait);
-        //interact("Copper rocks", "Mine", TILE_OBJECT);
-        //block(medWait);
-
-        //interact("Furnace", "Use", TILE_OBJECT);
-        //block(medWait);
-
-        //talk("Mining Instruction");
-        //cshort();
-
-        //// widget
-        //block(longWait);
-        //
-        //path(3093, 9502);
-        //interact("Gate", "Open", TILE_OBJECT);
-        //talk("Combat Instructor");
-        //cshort();
-        //
-        //// widget
-        //block(longWait);
-        //
-        //interact("Bronze dagger", "Wield", INVENTORY);
-        //talk("Combat Instructor");
-        //cshort();
-        //interact("Bronze sword", "Wield", INVENTORY);
-        //interact("Wooden shield", "Wield", INVENTORY);
-
-        //// widget
-        //block(longWait);
-        //
-        //path(3111, 9518);
-        //interact("Gate", "Open", TILE_OBJECT);
-
-        //interact("Giant rat", "Attack", NPC);
-        //block(medWait);
-        //path(3110, 9518);
-        //interact("Gate", "Open", TILE_OBJECT);
-        //block(medCont);
-        //talk("Combat Instructor");
-        //cshort();
-
-        //// widget
-        //block(longWait);
-        //
-        //interact("Shortbow", "Wield", INVENTORY);
-        //interact("Bronze arrow", "Wield", INVENTORY);
-        //interact("Giant rat", "Attack", NPC);
-
-        //path(3111, 9525);
-        //interact("Ladder", "Climb-up", TILE_OBJECT);
-        //block(shortCont);
-        //block(shortWait);
-
-        //path(3122, 3123);
-        //interact("Bank both", "Use", TILE_OBJECT);
-        //block(shortCont);
-
-        //// widget
-        //block(longWait);
-
-        //path(3120, 3121);
-        //interact("Poll both", "Use", TILE_OBJECT);
-        //block(shortCont);
-        //cshort();
-
-        //// widget
-        //block(longWait);
-
-        //path(3124, 3124);
-        //interact("Door", "Open", TILE_OBJECT);
-        //block(shortCont);
-        //talk("Account Guide");
-        //cshort();
-
-        //// widget
-        //block(longWait);
-
-        //talk("Account Guide");
-        //clong();
-        //path(3129, 3124);
-        //interact("Door", "Open", TILE_OBJECT);
-        //block(shortCont);
-
-        //path(3125, 3107);
-        //talk("Brother Brace");
-        //cshort();
-
-        //// widget
-        //block(longWait);
-
-        //talk("Brother Brace");
-        //cshort();
-
-        //// widget
-        //block(longWait);
-
-
-        //talk("Brother Brace");
-        //cshort();
-
-        //path(3122, 3103);
-        //interact("Door", "Use", TILE_OBJECT);
-        //block(shortCont);
-
-        //path(3141, 3088);
-        //talk("Magic Instructor");
-        //cshort();
-
-        //// widget
-        //block(longWait);
-
-        //talk("Magic Instructor");
-
-        //// widget
-        //block(longWait);
-
-        //interact("Chicken", "Cast", NPC);
-        //block(medCont);
-        //talk("Magic Instructor");
-        //cont();
-        //dialogue("Yes", 1);
-        //cont();
-
-        //// random
-        //// num = need to parse for num (regex?)
-        //int num = 3;
-        //dialogue("No, I'm not planning to do that.", num);
-        //clong();
-        //block(medWait);
-        //cont();
-    //}
+    }
 
     public void xMarksTheSpot()
     {
-        if (!_cfg.get("Started X Marks the Spot")) {
+        if (!ctx.config.startedXMarksTheSpot()) {
             log.info("Already started X Marks the Spot!");
 
             // Starting the quest.
@@ -416,7 +1234,7 @@ public class Registry {
     public void sheepShearer()
     {
         // xxx handle if it's started already or not
-        if (!_cfg.get("Started Sheep Shearer")) {
+        if (!ctx.config.startedSheepShearer()) {
             log.info("Already started Sheep Shearer!");
         }
 
@@ -499,7 +1317,7 @@ public class Registry {
         // Not a good way to avoid pathing here, whether it's started or not...
         path(new WorldPoint(3208, 3216, 0));
 
-        if (!_cfg.get("Started Cook's Assistant")) {
+        if (ctx.config.startedCooksAssistant()) {
             log.info("Already started Cook's Assistant!");
 
             talk("Cook");
@@ -567,7 +1385,7 @@ public class Registry {
 
     public void runeMysteries()
     {
-        if (!_cfg.get("Started Rune Mysteries")) {
+        if (!ctx.config.startedRuneMysteries()) {
             log.info("Already started Rune Mysteries!");
 
             // not started
@@ -638,7 +1456,7 @@ public class Registry {
 
     public void romeoAndJuliet()
     {
-        if (!_cfg.get("Started Romeo and Juliet")) {
+        if (ctx.config.startedRomeoAndJuliet()) {
             log.info("Already started Rune Mysteries!");
 
             // not started
@@ -746,7 +1564,7 @@ public class Registry {
 
     public void theRestlessGhost()
     {
-        if (!_cfg.get("Started The Restless Ghost")) {
+        if (ctx.config.startedTheRestlessGhost()) {
             log.info("Already started The Restless Ghost!");
             // not started
             path(3243, 3208);
@@ -1230,14 +2048,27 @@ public class Registry {
                            .empty();
     }
 
-    // xxx likely will fix timers with npcs, also look into way for overall 
-    // animations
-    //// Check both if the player is interacting and if there is an interaction target
-    //boolean currentlyInCombat = plugin.getClient().getLocalPlayer().isInteracting() &&
-    //        plugin.getClient().getLocalPlayer().getInteracting() != null;
+    private void goLumbridgeBank()
+    {
+        pathTO(3206, 3208, ObjectID.STAIRCASE_16671, "Climb-up");
+        block(minWait);
+        interact("Staircase", "Climb-up", TILE_OBJECT);
+        register(() -> !Action.isInteractingTO(ctx.client));
+        block(minWait);
+        // path to bank
+    }
+
+    private void leaveLumbridgeBank()
+    {
+        pathTO(3206, 3214, 2, "Staircase", "Climb-down");
+        block(minWait);
+        interact("Staircase", "Climb-down", TILE_OBJECT);
+        register(() -> !Action.isInteractingTO(ctx.client));
+        block(minWait);
+    }
 
     /** 
-     a Common dialogue helper macros.
+     * Common dialogue helper macros.
      */
     private void cont()
     {
@@ -1322,7 +2153,6 @@ public class Registry {
     /*
      * Plugin Context for the Registry.
      */
-    private Map<String, Boolean> _cfg;
     private Instructions instructions;
     private Pathing pathing;
     private AutoQuesterContext ctx;

@@ -21,6 +21,25 @@ public class RandomUtil {
         // Generate a random integer between min and max (inclusive)
         return min + (int)(Math.random() * ((max - min) + 1));
     }
+    
+    /**
+     * Generic random tick delay that can be re-used in many things, but
+     * changed once -- here.
+     */
+    public static int randTicks()
+    {
+        /** @note Change minimum/maximum for all plugins here: */
+        final int MIN = 0;
+        final int MAX = 7;
+
+        // Ensure min is less than or equal to max
+        if (MIN > MAX) {
+            throw new IllegalArgumentException("min should be less than or equal to max");
+        }
+        
+        // Generate a random integer between min and max (inclusive)
+        return MIN + (int)(Math.random() * ((MAX - MIN) + 1));
+    }
 
     public static void randLambda(Runnable lambda)
     {

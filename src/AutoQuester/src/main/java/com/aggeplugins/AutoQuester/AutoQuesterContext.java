@@ -26,15 +26,11 @@ public class AutoQuesterContext extends Context {
     public ClientThread clientThread;
 
     // Instance context.
-    public Map<String, Boolean> cfg;
     public Instructions instructions;
-    public Pathing pathing;
-    public Action action;
 
     public AutoQuesterContext(AutoQuesterPlugin plugin, 
                               AutoQuesterConfig config,
                               Client client, ClientThread clientThread,
-                              Map<String, Boolean> cfg,
                               Instructions instructions)
     {
         super(plugin, config, client, clientThread);
@@ -42,7 +38,6 @@ public class AutoQuesterContext extends Context {
         this.config = config;
         this.client = client;
         this.clientThread = clientThread;
-        this.cfg = cfg;
         this.instructions = instructions;
     }
 }

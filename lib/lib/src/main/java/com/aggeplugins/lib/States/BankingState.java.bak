@@ -49,7 +49,6 @@ public class BankingState extends State {
 
     private void init()
     {
-        ctx.plugin.currState = "BANKING";
     }
 
     @Override
@@ -59,7 +58,7 @@ public class BankingState extends State {
 
         // xxx deal with bank pin
        
-        if (canDeposit()) {
+        if (canDeposit() && !emptyInventory()) {
             // Bank Widget up, can deposit.
             log.info("Can deposit items");
             List<Widget> items = BankInventory.search().result();
@@ -70,7 +69,7 @@ public class BankingState extends State {
                                 item, "Deposit-All");
                     }
                 }
-            requestPopState();
+            ..requestPopState();
         } else if (!canBank()) {
             log.info("Cannot bank, pushing Pathing state");
             requestPushState(StateID.PATHING);
@@ -125,6 +124,16 @@ public class BankingState extends State {
                 NPCInteraction.interact(npc, "Bank");
         }); 
         return found.get();
+    }
+
+    private boolean withdrawItems(String items)
+    {
+        // trim string
+    }
+
+    private boolean emptyInventory()
+    {
+        return Inventory.getEmptySlots() == 28;
     }
 
     //private boolean canNpcBank()
