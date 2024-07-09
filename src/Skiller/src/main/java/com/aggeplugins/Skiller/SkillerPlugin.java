@@ -44,12 +44,14 @@ import net.runelite.client.util.Text;
 import net.runelite.api.Client;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.api.Skill;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import com.google.inject.Provides;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -86,6 +88,8 @@ public class SkillerPlugin extends Plugin {
     private SkillerContext ctx;
     private int timeout;
     private MessageBus messageBus;
+    private Message<MessageID, ?> msg;
+    private Pair<Skill, Integer> pair;
 
     public boolean started;
     public String currState = "";
@@ -116,6 +120,9 @@ public class SkillerPlugin extends Plugin {
         stack.pushState(StateID.SKILLING);
         messageBus = messageBus.instance();
         messageBus.instance();
+
+        // Random delay 0-7 between actions.
+        timeout = RandomUtil.randTicks();    
     }
 
     private void initInstance()
@@ -189,6 +196,8 @@ public class SkillerPlugin extends Plugin {
         ctx = null;
         stack = null;
         messageBus = null;
+
+        timeout = 0;
     }
 
     @Provides
@@ -205,11 +214,20 @@ public class SkillerPlugin extends Plugin {
             // We do an early return if the user isn't logged in
             return;
         }
+        
+        // Set the current overlay State name to the top of the StateStack.
+        if (stack.size() > 1) // let skilling control its own name
+            currState = stack.peekName();
 
         if (messageBus.query(MessageID.INSTRUCTIONS)) {
-            // Don't run and listen for instructions if being controlled by
+            // Don't run, instead listen for instructions if being controlled by
             // AccountBuilder.
-            return;
+            if (!messageBus.query(MessageID.REQUEST_SKILLING)) {
+                log.info("No skilling request!");
+                return;
+            }
+            // else, handle instructions
+            handleInstructions();
         }
 
         // For current WorldPoint polling (to find skilling location 
@@ -219,15 +237,22 @@ public class SkillerPlugin extends Plugin {
                 client.getLocalPlayer().getWorldLocation());
         }
 
+        // Block all actions behind a random delay.
+        if (timeout-- > 0) {
+            log.info("Delaying actions: {}", timeout);
+            return;
+        }
+
+        /* Proceed with core actions after random delay: */
+
         // Handle run energy.
         Action.checkRunEnergy(client);
 
         // Let states control everything else.
         stack.run();
-        // Set the current overlay State name to the top of the StateStack 
-        // (after running the State to not interupt the run procedure).
-        if (stack.size() > 1) // let skilling control its own name
-            currState = stack.peekName();
+
+        // Reset random delay to block actions again.
+        timeout = RandomUtil.randTicks();
     }
 
     private void setTimeout() {
@@ -240,6 +265,25 @@ public class SkillerPlugin extends Plugin {
             toggle();
         }
     };
+
+    private void handleInstructions()
+    {
+        if (msg == null) {
+            msg = (Message<MessageID, Pair<Skill, Integer>>)
+                messageBus.get(MessageID.REQUEST_SKILLING);
+            pair = (Pair<Skill, Integer>) msg.getData();
+        } else if (Action.checkLevelUp(client, pair.getLeft(),
+                                               pair.getRight())) {
+            log.info("Done skilling! Releasing control...");
+            messageBus.send(new Message<MessageID, Boolean>(
+                MessageID.DONE_SKILLING, true));
+
+            // cleanup
+            messageBus.remove(MessageID.REQUEST_SKILLING);
+            msg = null;
+            pair = null;
+        }
+    }
     
     public void toggle() {
         if (!EthanApiPlugin.loggedIn()) {

@@ -120,7 +120,8 @@ public class FighterPlugin extends Plugin {
 
     private void init()
     {
-        tickDelay = config.tickDelay();
+        tickDelay = RandomUtil.randTicks();
+        //tickDelay = config.tickDelay();
         addTasks();
     }
 
@@ -151,6 +152,7 @@ public class FighterPlugin extends Plugin {
     {
         lootQueue.clear();
         taskManager.clearTasks();
+        tickDelay = 0;
     }
 
     @Subscribe
@@ -173,13 +175,15 @@ public class FighterPlugin extends Plugin {
 
         log.info("Game tick observed. Queue size before any operation: {}", lootQueue.size());
 
-        Action.checkRunEnergy(client);
-
-        // Wrap the entire main run loop in a tick delay.
-        if (tickDelay-- <= 0) {
-            tickDelay = config.tickDelay();
+        // Block all actions behind a random delay.
+        if (tickDelay-- > 0) {
+            log.info("Delaying actions: {}", tickDelay);
             return;
         }
+
+        /* Proceed with core actions after random delay: */
+
+        Action.checkRunEnergy(client);
 
         //log.info("TaskManager has tasks!");
         for (AbstractTask t : taskManager.getTasks()) {
@@ -189,7 +193,11 @@ public class FighterPlugin extends Plugin {
                 continue;
             }
         }
+
         log.info("Game tick processing completed. Queue size after operations: {}", lootQueue.size());
+
+        // Reset random delay to block actions again.
+        tickDelay = RandomUtil.randTicks();
     }
 
     @Subscribe

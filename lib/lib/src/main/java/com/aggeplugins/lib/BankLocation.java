@@ -76,6 +76,11 @@ public enum BankLocation {
     {
         return this.wa;
     }
+
+    public WorldPoint getWp()
+    {
+        return this.wa.toWorldPoint();
+    }
     
     /* 
      * @note An implementation that doesn't preemptively do the WorldPoint 
@@ -96,7 +101,12 @@ public enum BankLocation {
             BankLocation location = BankLocation.valueOf(text);
             return location.getWorldArea().toWorldPoint();
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Unknown bank location: " + text);
+            if ("".equals(text)) {
+                return null;
+            } else {
+                throw new IllegalArgumentException(
+                    "Unknown bank location: " + text);
+            }
         }
     }
 
