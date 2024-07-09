@@ -107,9 +107,11 @@ public class Registry {
 
     // Register all the instructions, these will return TRUE when they should
     // be removed. Then move on to the next instruction.
+    //
+    // Can I delete one of these testInstruction blocks?
 
-    public void testInstructions()
-    {
+    //public void testInstructions()
+    //{
         //messageBus.send(new Message<MessageID, Instruction>(
         //    MessageID.REQUEST_SKILLING,
 
@@ -119,8 +121,9 @@ public class Registry {
         //    ctx.plugin.configManager.getConfigDescriptor(conf);
         //ctx.plugin.configManager.setConfiguration(
         //    descriptor, "setBank", "VARROCK_EAST");
-        ctx.plugin.configManager.setConfiguration("Skiller", "setBank", "VARROCK_EAST");
-    }
+        //ctx.plugin.configManager.setConfiguration("Skiller", "setBank", "VARROCK_EAST");
+    //}
+
     /**
      * @enum InstructionID
      * InstructionID enumeration for Instruction sets (the Instruction map).
