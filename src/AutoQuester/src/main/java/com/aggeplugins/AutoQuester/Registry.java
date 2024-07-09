@@ -82,7 +82,7 @@ public class Registry {
         longWait = 50 + this.rand.nextInt(71);
     }
 
-    //private Map<InstructionID, Pair<BooleanSupplier, Instruction> instructionMap 
+    //private Map<InstructionID, Pair<BooleanSupplier, Instruction> instructionMap
     //    = new HashMap<>(
     //        InstructionID.15_MINING_TIN,
     //    new Pair<>(
@@ -104,13 +104,13 @@ public class Registry {
 
     // Register all the instructions, these will return TRUE when they should
     // be removed. Then move on to the next instruction.
-    
-    public void testInstructions() 
+
+    public void testInstructions()
     {
         //messageBus.send(new Message<MessageID, Instruction>(
-        //    MessageID.REQUEST_SKILLING, 
+        //    MessageID.REQUEST_SKILLING,
 
-        //SkillerConfig conf = 
+        //SkillerConfig conf =
         //    ctx.plugin.configManager.getConfig(SkillerPlugin.class);
         //ConfigDescriptor descriptor =
         //    ctx.plugin.configManager.getConfigDescriptor(conf);
@@ -145,19 +145,9 @@ public class Registry {
 
     //}
 
-
-
-
-
-
-
-
-
-
-
     //public void tutorialIsland()
     //{
-        //10747973 // normal dialogue        
+        //10747973 // normal dialogue
 
         //block(longWait);
 
@@ -165,7 +155,7 @@ public class Registry {
         //block(shortWait);
 
         //// xxx widget
-        //block(longWait); 
+        //block(longWait);
         //
         //block(medCont);
 
@@ -359,22 +349,25 @@ public class Registry {
             log.info("Already started X Marks the Spot!");
 
             // Starting the quest.
-            path(3228, 3242);
+            path(3230, 3240);
 
             // Full Veos dialogue.
             talk("Veos");
             cshort();
             dialogue("I'm looking for a quest.", 2);
-            cmed();
-            dialogue("Yes", 1);
+            clong();
+            dialogue("Yes.", 1);
             block(medCont);
+            cmed();
+            block(shortWait); // needed?
+            register(() -> Action.pressSpace(ctx.client));
             cmed();
             dialogue("Okay, thanks Veos.", 1);
             cmed();
         }
 
         // Shop keeper
-        path(3112, 3246);
+        path(3212, 3246);
         trade("Shop keeper");
 
         // Using class Action and class XXXInteraction interchangably, whatever
@@ -400,15 +393,15 @@ public class Registry {
         interact("Spade", "Dig", INVENTORY);
 
         // Final Veos
-        path(3054, 3245);
+        path(3054, 3247);
         talk("Veos");
         clong();
         // xxx deal with different continue
-
+        register(() -> Action.pressSpace(ctx.client)); // xxx does this work
         // 2 here, to make sure
         clong();
         // Start pathing
-        path(3054, 3245);
+        path(3054, 3247);
         // Will get caught in another dialogue
         clong();
     }
@@ -418,6 +411,18 @@ public class Registry {
         // xxx handle if it's started already or not
         if (!_cfg.get("Started Sheep Shearer")) {
             log.info("Already started Sheep Shearer!");
+
+            path(3190, 3273);
+            talk("Fred the Farmer");
+
+            //cont();
+            cshort();
+            dialogue("I'm looking for a quest.", 1);
+            clong();
+            cmed();
+            dialogue("Yes.", 1);
+            clong();
+            clong();
         }
 
         // Fred the Farmer, pickup shears
@@ -453,7 +458,7 @@ public class Registry {
             register(() -> !Action.isInteractingNPC(ctx.client));
             //block(medWait);
         }                                               // = 21
-        
+
         pathDoor(3212, 3262);
 
         // Go to Lumbridge Castle staircase
@@ -497,21 +502,21 @@ public class Registry {
     public void cooksAssistant()
     {
         // Not a good way to avoid pathing here, whether it's started or not...
-        path(new WorldPoint(3208, 3216, 0));
+        //path(new WorldPoint(3208, 3216, 0));
 
         if (!_cfg.get("Started Cook's Assistant")) {
             log.info("Already started Cook's Assistant!");
 
             talk("Cook");
-            register(() -> Action.continueDialogue(), null);
+            cmed();
             register(() -> Action.selectDialogue(
                 "You don't look very happy.", 3), null);
-            register(() -> Action.continueDialogue(), shortCont);
+            cshort();
             register(() -> Action.selectDialogue(
                 "What's wrong?", 1), null);
-            register(() -> Action.continueDialogue(), medCont);
+            cmed();
             dialogue("Yes", 1);
-            cshort();
+            cmed();
             dialogue("Actually, I know where to find this stuff", 4);
             cont();
         }
@@ -531,11 +536,15 @@ public class Registry {
         path(3252, 3266);
         path(3254, 3271);
         interact(ObjectID.DAIRY_COW, "Milk", TILE_OBJECT);
-        block(longCont);
+        block(medWait);
         path(3163, 3288);
         path(3162, 3292);
-        interact("Wheat", "Pick", TILE_OBJECT);
-        block(shortWait);
+
+        // picking wheat
+        // distance 5
+        register(() -> Action.interactTileObject(15507, "Pick", 5));
+        register(() -> !Action.isInteractingTO(ctx.client));
+
         path(3164, 3306);
         interact(12964, "Climb-up", TILE_OBJECT);
         block(medCont);
@@ -543,7 +552,7 @@ public class Registry {
         interact(12965, "Climb-up", TILE_OBJECT);
         block(medCont);
         interact(ObjectID.HOPPER_24961, "Fill", TILE_OBJECT);
-        block(medCont);
+        block(shortWait);
         interact(ObjectID.HOPPER_CONTROLS_24964, "Operate", TILE_OBJECT);
         block(shortWait);
         interact(12966, "Climb-down", TILE_OBJECT);
@@ -551,7 +560,7 @@ public class Registry {
         interact(12965, "Climb-down", TILE_OBJECT);
         block(medCont);
         interact(1781, "Empty", TILE_OBJECT);
-        block(medCont);
+        block(medWait);
 
         // xxx to maybe guarantee door? can break!!
         //path(3167, 3303);
@@ -559,10 +568,11 @@ public class Registry {
 
         path(3186, 3278);
         interact("Egg", TAKE, TILE_ITEM);
-        block(medCont);
+        block(medWait);
         path(new WorldPoint(3208, 3216, 0));
         talk("Cook");
         clong();
+        cmed();
     }
 
     public void runeMysteries()
@@ -578,8 +588,11 @@ public class Registry {
             talk("Duke Horacio");
             cont();
             dialogue("Have you any quests for me?", 1);
-            clong();
-            dialogue("Yes", 1);
+            cmed();
+            block(shortWait);
+            register(() -> Action.pressSpace(ctx.client));
+            cmed();
+            dialogue("Yes.", 1);
             cmed();
             path(3205, 3209, 1);
             interact(16672, "Climb-down", TILE_OBJECT);
@@ -587,6 +600,12 @@ public class Registry {
         }
 
         // Going to Wizard's Tower.
+        path(3107, 3163);
+
+        register(() -> !Action.canOpenDoor(1));
+        interact("Door", "Open", TILE_OBJECT);
+        register(() -> !Action.isInteractingTO(ctx.client));
+
         path(3105, 3162); // xxx there's probably a better wp
         interact(2147, "Climb-down", TILE_OBJECT);
         block(medCont); // xxx too long?
@@ -596,36 +615,71 @@ public class Registry {
         talk("Archmage Sedridor");
         cmed();
         dialogue("Okay, here you are.", 1);
-        clong();
+
+        // check this part of dia!
+        cmed(); // xxx left off here -kp
+        block(shortWait);
+        register(() -> Action.pressSpace(ctx.client));
         cmed();
+        register(() -> Action.pressSpace(ctx.client)); // needed?
+        cmed();
+        // END
+        //(rest untested)
         dialogue("Go ahead.", 1);
         clong();
         cmed(); // xxx is this needed? LONG dialogue
         dialogue("Yes, certainly.", 1);
         cmed();
-        path(3109, 9570, 0);
-        path(3104, 9587, 0);
-        interact(2148, "Climb-up", TILE_OBJECT);
-        block(medCont); // xxx too long?
-        path(3108, 3163); // wp
+
+        path(3109, 9570, 0); // path through door
+        path(3104, 9587, 0); // path to ladder
+
+        interact(2148, "Climb-up", TILE_OBJECT); // climb ladder
+        register(() -> !Action.isInteractingTO(ctx.client));
+
+        path(3106, 3162); // path to door
+
+        register(() -> !Action.canOpenDoor(MAX_DISTANCE));
+        interact(23972, "Open", TILE_OBJECT);
+        register(() -> !Action.isInteractingTO(ctx.client));
+
+        path(3109, 3166); // path to 2nd door
+
+        register(() -> !Action.canOpenDoor(1));
+        interact(23972, "Open", TILE_OBJECT);
+        register(() -> !Action.isInteractingTO(ctx.client));
 
         // Going to Varrock.
         // xxx broken, different path!
+        // path worked for me ?? D:
         path(3252, 3402);
         talk("Aubury");
         cont();
         dialogue("I've been sent here with a package for you.", 2);
         clong();
-        cmed(); // xxx
+
+        // test this
+        block(shortWait);
+        register(() -> Action.pressSpace(ctx.client));
+        cmed();
+        block(shortWait);
+        register(() -> Action.pressSpace(ctx.client));
 
         // Back to Wizard's Tower.
-        path(3103, 3162); // xxx there's probably a better wp
+        path(3107, 3163);
+        register(() -> !Action.canOpenDoor(1, 3107, 3162));
+        interact(23972, "Open", TILE_OBJECT);
+        register(() -> !Action.isInteractingTO(ctx.client));
+
+        path(3105, 3162);
         interact(2147, "Climb-down", TILE_OBJECT);
         block(medCont); // xxx too long?
         path(3109, 9570, 0); // xxx better wp
         path(3103, 9571, 0); // xxx better wp
         // @note from here on out: "wp" = "xxx better wp"
         talk("Archmage Sedridor");
+        cmed();
+        register(() -> Action.pressSpace(ctx.client));
         clong();
 
         // Leave Wizard's Tower.
@@ -644,64 +698,74 @@ public class Registry {
             // not started
             path(3213, 3428);
             talk("Romeo");
-            cont();
+            cshort();
             dialogue("Yes, I have seen her actually!", 1);
             clong();
             cmed();
             dialogue("Yes.", 1);
+            clong();
+            dialogue("Ok, thanks.", 3); // why did it break here? check xxx
             cshort();
-            dialogue("Ok, thanks.", 3);
-            cont();
         }
 
         // To Juliet.
-        //path(3159, 3436);
-        //interact(11797, "Climb-up", TILE_OBJECT);
-        //block(shortCont);
-        //path(3158, 3425, 1);
-        //talk("Juliet");
-        //clong();
-        //path(3157, 3429, 1); // wp
-        //path(3155, 3436, 1);
-        //interact(11799, "Climb-down", TILE_OBJECT);
-        //block(shortCont);
+        path(3159, 3436);
+        interact(11797, "Climb-up", TILE_OBJECT);
+        block(shortCont);
+        path(3158, 3425, 1);
+        talk("Juliet");
+        clong();
+        cmed(); // too long?
+        register(() -> Action.pressSpace(ctx.client), null);
+        path(3157, 3429, 1); // wp
+        path(3155, 3436, 1);
+        interact(11799, "Climb-down", TILE_OBJECT);
+        block(shortCont);
 
-        //// Back to Romeo.
-        //path(3213, 3428);
-        //talk("Romeo");
-        //clong();
-        //clong();
-        //dialogue("Ok, thanks.", 4);
+        // Back to Romeo.
+        path(3213, 3428);
+        talk("Romeo");
+        cshort();
+        block(shortWait);
+        register(() -> Action.pressSpace(ctx.client), null);
+        clong();
+        cmed();
+        block(shortWait);
+        register(() -> Action.pressSpace(ctx.client), null);
+        clong(); // 14 dialogues!
+        cmed(); // too much?
+        dialogue("Ok, thanks.", 4);
 
-        //// To Father Lawrence.
-        //path(3255, 3482);
-        //talk("Father Lawrence");
-        //cmed();
-        //block(medWait); // cutscene
-        //clong();
-        //clong();
-        //clong(); // xxx may be too long? but it made it work lol
+        // To Father Lawrence.
+        path(3255, 3482);
+        talk("Father Lawrence");
+        clong();
+        block(medWait); // cutscene
+        clong(); // cut out a cont, make sure this still works
+        clong();
 
-        //// varrock east mine 3x iron: (3286, 3388, 0)
+        // varrock east mine 3x iron: (3286, 3388, 0)
 
-        //// Cadava berries.
-        //path(3270, 3370);
+        // Cadava berries.
+        path(3270, 3370);
 
-        //// bush1 = 23635, bush2 = 23625, bush3 = 33183
-        //// random select
-        //int[] a = {23635, 23625, 33183};
-        //interact(rand(a), "Pick-from", TILE_OBJECT);
-        //block(shortWait);
+        // bush1 = 23635, bush2 = 23625, bush3 = 33183
+        // random select
+        int[] a = {23635, 23625, 33183};
+        interact(rand(a), "Pick-from", TILE_OBJECT);
+        block(shortWait);
 
-        path(3195, 3404);
+        //path(3195, 3404);
         talk("Apothecary");
         cont();
         dialogue("Talk about something else.", 2);
         dialogue("Talk about Romeo & Juliet.", 1);
-        cmed();
-        block(shortWait); // animation
-        register(() -> Action.pressSpace(ctx.client), null);
         clong();
+        block(shortWait); // animation
+        cshort();
+        register(() -> Action.pressSpace(ctx.client), null);
+        block(shortWait); // making the potion animation
+        cmed();
         // Final chat is him giving you potion, is this needed v ? check!
         block(shortWait);
         register(() -> Action.pressSpace(ctx.client), null);
@@ -713,15 +777,11 @@ public class Registry {
         path(3158, 3425, 1);
         talk("Juliet");
         clong();
-        block(shortWait); // cutscene
-        cmed();
-        block(medCont); // xxx needed?
-        cont();
-        block(medCont); // xxx needed?
-        cmed();
-        block(longCont); // animation
-        cshort();
-        block(longCont); // animation
+        clong();
+        register(() -> Action.pressSpace(ctx.client), null);
+        clong();
+        clong();
+        clong(); // maybe could be cmed, but it is less than before and works
 
         // Leave Juliet.
         path(3157, 3429, 1); // wp
@@ -732,7 +792,7 @@ public class Registry {
         // To Romeo.
         path(3213, 3428);
         talk("Romeo");
-        cmed();
+        clong();
         block(medCont); // cutscene
         cshort();
         block(longCont); // cutscene
@@ -742,6 +802,8 @@ public class Registry {
         block(shortWait); // cutscene
         cmed();
         block(shortWait); // finishing cutscene
+        clong();
+        cmed(); // needed?
     }
 
     public void theRestlessGhost()
@@ -756,6 +818,7 @@ public class Registry {
             cshort();
             dialogue("Yes", 1);
             clong();
+            cmed();
         }
 
         // Go to Father Urhney
@@ -768,42 +831,54 @@ public class Registry {
         clong();
         interact("Ghostspeak amulet", "Wear", INVENTORY); // xxx might break
 
+        //Go to coffin.
+        path(3246, 3192);
+        register(() -> !Action.interactTileObject(1535, "Open", 1));
+
+        path(3250, 3193);
+        interact(2145, "Open", TILE_OBJECT);
+
+        block(shortWait);
+        talk("Restless ghost");
+        clong();
+        dialogue("Yep, now tell me what the problem is.", 1);
+        clong();
+        clong();
+
         // To Wizard's Tower.
-        path(3103, 3162); // xxx there's probably a better wp
+        path(3107, 3163);
+        register(() -> !Action.interactTileObject(23972, "Open", 1));
+
+        path(3105, 3162); // xxx there's probably a better wp
         interact(2147, "Climb-down", TILE_OBJECT);
         block(medCont); // xxx too long?
 
-        // Go to coffin.
-        path(3248, 3193);
-        interact(2145, "Open", TILE_OBJECT);
-        block(shortWait);
-        talk("Restless ghost");
-        cmed();
-        dialogue("Yep, now tell me what the problem is.", 1);
-        clong();
+        // Go to door.
+        path(3110, 9559);
+        register(() -> !Action.interactTileObject(1535, "Open", 1));
 
-        // Go to Skeleton.
-        path(3107, 9558, 0);
-        path(3114, 9561, 0);
-
-        // xxx could also just interact and block, but want to minimize damage
-        path(3120, 9565, 0);
+        // Go to altar.
+        path(3119, 9567);
         interact(2146, "Search", TILE_OBJECT);
+
         block(minWait);
         path(3114, 9561, 0);
         path(3107, 9558, 0);
 
         path(3104, 9576, 0);
         interact(2148, "Climb-up", TILE_OBJECT);
-        block(medCont); // xxx too long?
-        path(3108, 3163); // wp
+        block(medCont);
+        path(3106, 3162);
+        register(() -> !Action.interactTileObject(23972, "Open", 1));
+
 
         // Go to coffin.
         path(3248, 3193);
         interact(2145, "Open", TILE_OBJECT);
         block(longCont);
         // xxx might have to do different way
-        interact("Ghost's skull", "Use", INVENTORY);
+        interact("Ghost's Skull", "Use", INVENTORY);
+        block(shortCont);
         interact(2145, "Use", TILE_OBJECT);
 
         block(medWait); // cutscene
@@ -1033,11 +1108,11 @@ public class Registry {
 
     private void path(WorldPoint wp)
     {
-        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH), 
+        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH),
             "Setting path type");
         instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
         instructions.register(() -> pathing.setPath(), "Setting path");
-        instructions.register(() -> !pathing.calculatingPath(), 
+        instructions.register(() -> !pathing.calculatingPath(),
             "Calculating path...");
         instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
     }
@@ -1045,11 +1120,11 @@ public class Registry {
     private void path(int x, int y)
     {
         WorldPoint wp = new WorldPoint(x, y, 0);
-        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH), 
+        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH),
             "Setting path type");
         instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
         instructions.register(() -> pathing.setPath(), "Setting path");
-        instructions.register(() -> !pathing.calculatingPath(), 
+        instructions.register(() -> !pathing.calculatingPath(),
             "Calculating path...");
         instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
     }
@@ -1057,11 +1132,11 @@ public class Registry {
     private void path(int x, int y, int z)
     {
         WorldPoint wp = new WorldPoint(x, y, z);
-        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH), 
+        instructions.register(() -> pathing.setType(Pathing.Type.SHORTEST_PATH),
             "Setting path type");
         instructions.register(() -> pathing.setGoal(wp), "Path to: " + wp);
         instructions.register(() -> pathing.setPath(), "Setting path");
-        instructions.register(() -> !pathing.calculatingPath(), 
+        instructions.register(() -> !pathing.calculatingPath(),
             "Calculating path...");
         instructions.register(() -> !pathing.run(), "Pathing to: " + wp);
     }
@@ -1069,12 +1144,12 @@ public class Registry {
     private void pathDoor(int x, int y)
     {
         path(x, y);
-        if (canOpenDoor(1)) {
+        if (Action.canOpenDoor(1)) {
             interact("Door", "Open", TILE_OBJECT);
             instructions.register(() -> !Action.isInteractingTO(ctx.client),
                                   "Opening door");
         }
-        else if (canOpenGate(1)) {
+        else if (Action.canOpenGate(1)) {
             interact("Gate", "Open", TILE_OBJECT);
             instructions.register(() -> !Action.isInteractingTO(ctx.client),
                                         "Opening gate");
@@ -1083,17 +1158,18 @@ public class Registry {
 
     private void openDoor()
     {
-        if (canOpenDoor(MAX_DISTANCE)) {
-            interact("Door", "Open", TILE_OBJECT);
-            instructions.register(() -> !Action.isInteractingTO(ctx.client),
-                                        "Opening door");
-        } else if (canOpenGate(MAX_DISTANCE)) {
-            interact("Gate", "Open", TILE_OBJECT);
-            instructions.register(() -> !Action.isInteractingTO(ctx.client),
-                                        "Opening gate");
-        } else {
-            log.info("Tried to open door, but no door to open!");
-        }
+        instructions.register(() -> !Action.canOpenDoor(MAX_DISTANCE), "Door");
+        interact("Door", "Open", TILE_OBJECT);
+        instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                    "Opening door");
+    }
+
+    private void openGate()
+    {
+        instructions.register(() -> !Action.canOpenGate(MAX_DISTANCE), "Gate");
+        interact("Door", "Open", TILE_OBJECT);
+        instructions.register(() -> !Action.isInteractingTO(ctx.client),
+                                    "Opening gate");
     }
 
     private void pathTO(int x, int y, int id, String action)
@@ -1103,7 +1179,7 @@ public class Registry {
         instructions.register(() -> !Action.isInteractingTO(ctx.client),
                                     action + "ing " + id);
     }
-    
+
     private void pathTO(int x, int y, int z, int id, String action)
     {
         path(x, y, z);
@@ -1119,7 +1195,7 @@ public class Registry {
         instructions.register(() -> !Action.isInteractingTO(ctx.client),
                                     action + "ing " + name);
     }
-    
+
     private void pathTO(int x, int y, int z, String name, String action)
     {
         path(x, y, z);
@@ -1214,29 +1290,13 @@ public class Registry {
         }
     }
 
-    private boolean canOpenDoor(int distance)
-    {
-        return !TileObjects.search()
-                           .nameContains("Door").withAction("Open")
-                           .withinDistance(distance)
-                           .empty();
-    }
-
-    private boolean canOpenGate(int distance)
-    {
-        return !TileObjects.search()
-                           .nameContains("Gate").withAction("Open")
-                           .withinDistance(distance)
-                           .empty();
-    }
-
-    // xxx likely will fix timers with npcs, also look into way for overall 
+    // xxx likely will fix timers with npcs, also look into way for overall
     // animations
     //// Check both if the player is interacting and if there is an interaction target
     //boolean currentlyInCombat = plugin.getClient().getLocalPlayer().isInteracting() &&
     //        plugin.getClient().getLocalPlayer().getInteracting() != null;
 
-    /** 
+    /**
      a Common dialogue helper macros.
      */
     private void cont()

@@ -1,13 +1,13 @@
 /**
  * @file Action.java
  * @class Action
- * Wrapper for different boolean Action(s) to be performed. 
+ * Wrapper for different boolean Action(s) to be performed.
  *
  * @author agge3
  * @version 1.0
  * @since 2024-06-15
  *
- * Special thanks to EthanApi and PiggyPlugins for API, inspiration, and a 
+ * Special thanks to EthanApi and PiggyPlugins for API, inspiration, and a
  * source of code at times.
  */
 
@@ -44,7 +44,7 @@ import java.util.Random;
 
 @Slf4j
 public class Action {
-    public Action()  
+    public Action()
     {
         log.info("Constructing Action!");
         _ticks = 0;
@@ -105,11 +105,11 @@ public class Action {
          //    return true;
          //}
          //timeout++;
-        
+
          return false;
     }
 
-    public static boolean interactNPC(String name, String action) 
+    public static boolean interactNPC(String name, String action)
     {
          log.info("Interacting with");
          if (NPCInteraction.interact(name, action)) {
@@ -122,7 +122,7 @@ public class Action {
          //    return true;
          //}
          //timeout++;
-        
+
          return false;
     }
 
@@ -135,7 +135,7 @@ public class Action {
     //    WidgetPackets.queueWidgetAction(plugin.getClient().getWidget(
     //        config.item().getWidgetInfo().getPackedId()), "Smith", "Smith set");
 
-    // xxx not needed, but keeping to maybe make generic wrapper (still not 
+    // xxx not needed, but keeping to maybe make generic wrapper (still not
     // really needed)
     public static boolean buyN(String name, int n)
     {
@@ -145,21 +145,21 @@ public class Action {
         }
         return false;
     }
-    
+
     // A better solution would be to use Widget packets, but if it's only SPACE...
-    public static boolean pressSpace(Client client) 
+    public static boolean pressSpace(Client client)
     {
         try {
-            KeyEvent keyPress = new KeyEvent(client.getCanvas(), 
-                    KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, 
+            KeyEvent keyPress = new KeyEvent(client.getCanvas(),
+                    KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0,
                     KeyEvent.VK_SPACE, KeyEvent.CHAR_UNDEFINED);
             client.getCanvas().dispatchEvent(keyPress);
-            KeyEvent keyRelease = new KeyEvent(client.getCanvas(), 
-                KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0, 
+            KeyEvent keyRelease = new KeyEvent(client.getCanvas(),
+                KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0,
                 KeyEvent.VK_SPACE, KeyEvent.CHAR_UNDEFINED);
             client.getCanvas().dispatchEvent(keyRelease);
-            KeyEvent keyTyped = new KeyEvent(client.getCanvas(), 
-                KeyEvent.KEY_TYPED, System.currentTimeMillis(), 0, 
+            KeyEvent keyTyped = new KeyEvent(client.getCanvas(),
+                KeyEvent.KEY_TYPED, System.currentTimeMillis(), 0,
                 KeyEvent.VK_SPACE, KeyEvent.CHAR_UNDEFINED);
             client.getCanvas().dispatchEvent(keyTyped);
             return true;
@@ -176,13 +176,29 @@ public class Action {
         TileItems.search()
                  .withName(name)
                  .withinDistance(10) // Assumed to be close.
-                 .first().ifPresent(item -> { 
+                 .first().ifPresent(item -> {
             MousePackets.queueClickPacket();
             TileItemPackets.queueTileItemAction(
                 actionNo, item.getTileItem().getId(),
                 item.getLocation().getX(), item.getLocation().getY(), false);
             log.info("Interacted with: " + name);
             found.set(true); });
+        return found.get();
+    }
+
+    public static boolean interactTileObject(int id, String action,
+                                             int distance) {
+        log.info("Trying to interact with: " + id + " " + action);
+        AtomicBoolean found = new AtomicBoolean(false);
+        TileObjects.search()
+                   .withId(id)
+                   .withAction(action)
+                   .withinDistance(distance)
+                   .first().ifPresent(item -> {
+            MousePackets.queueClickPacket();
+            ObjectPackets.queueObjectAction(item, false, action);
+            found.set(true);
+        });
         return found.get();
     }
 
@@ -202,12 +218,12 @@ public class Action {
             return true;
         }
         return false;
-    }   
+    }
 
-    public static void checkRunEnergy(Client client) 
+    public static void checkRunEnergy(Client client)
     {
         Random rand = new Random();
-        if (client.getVarpValue(173) == 0 && 
+        if (client.getVarpValue(173) == 0 &&
             client.getEnergy() >= rand.nextInt(50) * 100) { // random 0-50
             MousePackets.queueClickPacket();
             WidgetPackets.queueWidgetActionPacket(1, 10485787, -1, -1);
@@ -216,7 +232,7 @@ public class Action {
 
     public static boolean isInteractingNPC(Client client)
     {
-        return client.getLocalPlayer().isInteracting() && 
+        return client.getLocalPlayer().isInteracting() &&
                client.getLocalPlayer().getInteracting() != null;
     }
 
@@ -225,7 +241,7 @@ public class Action {
         return EthanApiPlugin.isMoving() ||
                client.getLocalPlayer().getAnimation() != -1;
     }
-    
+
     public static boolean isInteractingTO(Client client, WorldPoint wp)
     {
         return wp.getPlane() == client.getLocalPlayer()
@@ -238,13 +254,43 @@ public class Action {
         return Inventory.search().withId(id).onlyUnnoted().empty() &&
                !TileItems.search().withId(id).withinDistance(10).empty();
     }
-    
+
     public static boolean isInteractingTI(String name)
     {
         return Inventory.search().nameContains(name).onlyUnnoted()
                                                     .empty() &&
                !TileItems.search().nameContains(name).withinDistance(10)
                                                      .empty();
+    }
+
+    public static boolean canOpenDoor(int distance)
+    {
+        return !TileObjects.search()
+                           .nameContains("Door").withAction("Open")
+                           .withinDistance(distance)
+                           .first().isPresent();
+    }
+
+    public static boolean canOpenDoor(int distance, int x, int y)
+    {
+        return !TileObjects.search()
+                           .nameContains("Door").withAction("Open")
+                           .atLocation(x, y, 0)
+                           .withinDistance(distance)
+                           .first().isPresent();
+    }
+
+    public static boolean canOpenGate(int distance)
+    {
+        return !TileObjects.search()
+                           .nameContains("Gate").withAction("Open")
+                           .withinDistance(distance)
+                           .first().isPresent();
+    }
+
+    public static boolean isPathing()
+    {
+        return EthanApiPlugin.isMoving();
     }
 
     //public static void setMax(int max)
@@ -266,7 +312,7 @@ public class Action {
     {
         return _ticks > n;
     }
-    
+
     //private int _max;
     public static int _ticks;
 }
