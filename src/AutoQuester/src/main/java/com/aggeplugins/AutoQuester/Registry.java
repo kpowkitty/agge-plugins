@@ -1570,18 +1570,19 @@ public class Registry {
         if (ctx.config.startedCooksAssistant()) {
             log.info("Already started Cook's Assistant!");
 
+            path(3208, 3216);
             talk("Cook");
             cmed();
             register(() -> Action.selectDialogue(
                 "You don't look very happy.", 3), null);
-            cshort();
+            cmed();
             register(() -> Action.selectDialogue(
                 "What's wrong?", 1), null);
             cmed();
-            dialogue("Yes", 1);
+            dialogue("Yes.", 1);
             cmed();
             dialogue("Actually, I know where to find this stuff", 4);
-            cont();
+            cmed();
         }
 
         interact("Pot", TAKE, TILE_ITEM);
@@ -1597,6 +1598,7 @@ public class Registry {
         block(medCont);
 
         path(3252, 3266);
+        // need to add gate check here with function readded from dada
         path(3254, 3271);
         interact(ObjectID.DAIRY_COW, "Milk", TILE_OBJECT);
         block(medWait);
@@ -1676,7 +1678,7 @@ public class Registry {
         path(3103, 9571, 0); // xxx better wp
         // @note from here on out: "wp" = "xxx better wp"
         talk("Archmage Sedridor");
-        cmed();
+        clong();
         dialogue("Okay, here you are.", 1);
 
         // check this part of dia!
@@ -1685,12 +1687,13 @@ public class Registry {
         register(() -> Action.pressSpace(ctx.client));
         cmed();
         register(() -> Action.pressSpace(ctx.client)); // needed?
-        cmed();
+        clong();
         // END
         //(rest untested)
         dialogue("Go ahead.", 1);
         clong();
-        cmed(); // xxx is this needed? LONG dialogue
+        clong();
+        clong(); // needed, really long dia
         dialogue("Yes, certainly.", 1);
         cmed();
 
@@ -1721,10 +1724,9 @@ public class Registry {
         dialogue("I've been sent here with a package for you.", 2);
         clong();
 
-        // test this
         block(shortWait);
         register(() -> Action.pressSpace(ctx.client));
-        cmed();
+        clong();
         block(shortWait);
         register(() -> Action.pressSpace(ctx.client));
 
@@ -1742,6 +1744,7 @@ public class Registry {
         // @note from here on out: "wp" = "xxx better wp"
         talk("Archmage Sedridor");
         cmed();
+        block(medCont);
         register(() -> Action.pressSpace(ctx.client));
         clong();
 
@@ -1789,10 +1792,11 @@ public class Registry {
         path(3213, 3428);
         talk("Romeo");
         cshort();
-        block(shortWait);
+        block(medCont);
         register(() -> Action.pressSpace(ctx.client), null);
         clong();
-        cmed();
+        clong();
+        clong();
         block(shortWait);
         register(() -> Action.pressSpace(ctx.client), null);
         clong(); // 14 dialogues!
@@ -1804,7 +1808,6 @@ public class Registry {
         talk("Father Lawrence");
         clong();
         block(medWait); // cutscene
-        clong(); // cut out a cont, make sure this still works
         clong();
 
         // varrock east mine 3x iron: (3286, 3388, 0)
@@ -1818,7 +1821,7 @@ public class Registry {
         interact(rand(a), "Pick-from", TILE_OBJECT);
         block(shortWait);
 
-        //path(3195, 3404);
+        path(3195, 3404);
         talk("Apothecary");
         cont();
         dialogue("Talk about something else.", 2);
@@ -1829,12 +1832,11 @@ public class Registry {
         register(() -> Action.pressSpace(ctx.client), null);
         block(shortWait); // making the potion animation
         cmed();
-        // Final chat is him giving you potion, is this needed v ? check!
         block(shortWait);
         register(() -> Action.pressSpace(ctx.client), null);
 
         // To Juliet.
-        path(3159, 3436);
+        path(3159, 3435);
         interact(11797, "Climb-up", TILE_OBJECT);
         block(shortCont);
         path(3158, 3425, 1);
