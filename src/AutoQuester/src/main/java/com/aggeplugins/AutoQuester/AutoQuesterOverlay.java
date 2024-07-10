@@ -14,6 +14,7 @@
 package com.aggeplugins.AutoQuester;
 
 import com.aggeplugins.AutoQuester.*;
+import com.aggeplugins.lib.ui.*;
 
 import com.example.EthanApiPlugin.Collections.NPCs;
 import com.example.EthanApiPlugin.Collections.TileObjects;
@@ -35,27 +36,61 @@ import javax.sound.sampled.Line;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Optional;
+import java.time.Duration;
 
 public class AutoQuesterOverlay extends OverlayPanel {
+    // Import the common theme.
+    Theme theme = new Theme();
+   
     @Override
     public Dimension render(Graphics2D graphics)
     {
         panelComponent.getChildren().clear();
 
-        panelComponent.setPreferredSize(new Dimension(200, 480));
-        panelComponent.getChildren().add(TitleComponent.builder()
-                .text("AutoQuester")
-                .color(new Color(255, 157, 249))
-                .build());
-        panelComponent.getChildren().add(TitleComponent.builder()
-                .text(_plugin.started ? "STARTED" : "STOPPED")
-                .color(_plugin.started ? Color.GREEN : Color.RED)
+        panelComponent.setPreferredSize(new Dimension(435, 435));
+        panelComponent.setBackgroundColor(theme.background);
+        //panelComponent.setBorder(new Rectangle())
+
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("AccountBuilder")
+                //.leftFont(theme.sourceSansBlack)
+                .leftColor(theme.title)
+                .right(plugin.started ? "STARTED" : "STOPPED")
+                //.rightFont(theme.sourceSans)
+                .rightColor(plugin.started ? theme.green : theme.off)
                 .build());
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("Current instruction: ")
-                .leftColor(new Color(255, 157, 249))
-                .right(_plugin.getInstructionName())
-                .rightColor(Color.WHITE)
+                //.leftFont(theme.sourceCodePro)
+                .leftColor(theme.red)
+                .right(plugin.getInstructionName())
+                //.rightFont(theme.sourceCodePro)
+                .rightColor(theme.text)
+                .build());
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("Instructions remaining: ")
+                //.leftFont(theme.sourceCodePro)
+                .leftColor(theme.red)
+                .right(String.valueOf(plugin.getInstructionsSize()))
+                //.rightFont(theme.sourceCodePro)
+                .rightColor(theme.text)
+                .build());
+        // xxx throw a null pointer, ensure a clean init
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("Time elapsed: ")
+                //.leftFont(theme.sourceCodePro)
+                .leftColor(theme.red)
+                .right(plugin.logger.getFormattedTime())
+                //.rightFont(theme.sourceCodePro)
+                .rightColor(theme.text)
+                .build());
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("Exp gained: ")
+                //.leftFont(theme.sourceCodePro)
+                .leftColor(theme.red)
+                .right(String.valueOf(plugin.logger.getTotalExp()))
+                //.rightFont(theme.sourceCodePro)
+                .rightColor(theme.text)
                 .build());
 
         return super.render(graphics);
@@ -65,11 +100,11 @@ public class AutoQuesterOverlay extends OverlayPanel {
     private AutoQuesterOverlay(AutoQuesterPlugin plugin)
     {
         super(plugin);
-        _plugin = plugin;
-        setPosition(OverlayPosition.BOTTOM_LEFT);
+        this.plugin = plugin;
+        setPosition(OverlayPosition.TOP_LEFT);
         setLayer(OverlayLayer.ABOVE_SCENE);
         setDragTargetable(true);
     }
 
-    private final AutoQuesterPlugin _plugin;
+    private final AutoQuesterPlugin plugin;
 }

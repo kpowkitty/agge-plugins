@@ -131,6 +131,11 @@ public class StateStack {
         return history.peekLast().toString();
     }
 
+    public StateID peekId()
+    {
+        return history.peekLast();
+    }
+
     /**
      * Returns the size of the StateStack. Uses history to be low-cost.
      * Useful for determining how deep the StateStack is, or special behavior

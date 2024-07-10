@@ -78,13 +78,19 @@ public class SkillingState extends State {
                 }
                 
                 // Core action loop:
-                if (ctx.config.searchNpc()) {
-                    if (!findNpc())
-                        requestPushState(StateID.PATHING);
-                } else {
-                    if (!findObject())
-                        requestPushState(StateID.PATHING);
+                if (!findNpc() && !findObject()) {
+                    requestPushState(StateID.PATHING);
                 }
+
+                // OLD:
+                // xxx why even have it this way?
+                //if (ctx.config.searchNpc()) {
+                //    if (!findNpc())
+                //        requestPushState(StateID.PATHING);
+                //} else {
+                //    if (!findObject())
+                //        requestPushState(StateID.PATHING);
+                //}
             }
         }
         
@@ -153,9 +159,10 @@ public class SkillingState extends State {
                 ctx.config.objectToInteract())
             .withAction(
                 ctx.config.expectedAction())
-            .withinWorldArea(new WorldArea(ctx.client.getLocalPlayer()
-                                                     .getWorldLocation(),
-                                           MAX_DISTANCE, MAX_DISTANCE))
+            // xxx was breaking -- within location
+            //.withinWorldArea(new WorldArea(ctx.client.getLocalPlayer()
+            //                                         .getWorldLocation(),
+            //                               MAX_AREA, MAX_AREA))
             .nearestToPoint(
                 ctx.client.getLocalPlayer()
                           .getWorldLocation())
@@ -204,6 +211,7 @@ public class SkillingState extends State {
      * too far away, and properly enters the pathing state.
      */
     private int MAX_DISTANCE = 10;
+    private int MAX_AREA = 50;
 
     private SkillerContext ctx;
 }

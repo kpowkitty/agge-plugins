@@ -23,6 +23,7 @@ import net.runelite.api.coords.WorldPoint;
  * So, WorldPoint x, y are the first two parameters and z is the last parameter.
  */
 public enum BankLocation {
+    NONE(new WorldArea(0, 0, 0, 0, 0)),
     LUMBRIDGE(new WorldArea(3207, 3215, 4, 8, 2)),
     VARROCK_WEST(new WorldArea(3180, 3433, 6, 15, 0)),
     VARROCK_WEST1(new WorldArea(3185, 3436, 1, 1, 0)),
@@ -96,17 +97,15 @@ public enum BankLocation {
     //}
 
     // Method to convert string to enum and then to WorldPoint
-    public static WorldPoint fromString(String text) {
+    public static WorldPoint fromString(String text)
+    {
         try {
             BankLocation location = BankLocation.valueOf(text);
             return location.getWorldArea().toWorldPoint();
         } catch (IllegalArgumentException e) {
-            if ("".equals(text)) {
-                return null;
-            } else {
-                throw new IllegalArgumentException(
-                    "Unknown bank location: " + text);
-            }
+            //log.info("Invalid BankLocation, returning null");
+            // xxx maybe return a default wp, like the ge
+            return null;
         }
     }
 

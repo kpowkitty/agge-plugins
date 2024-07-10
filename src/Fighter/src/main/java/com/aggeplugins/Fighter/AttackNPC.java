@@ -30,7 +30,7 @@ public class AttackNPC extends AbstractTask<FighterPlugin, FighterConfig> {
     @Override
     public boolean validate()
     {
-        log.info("Entering attack NPC validation...");
+        //log.info("Entering attack NPC validation...");
         // Check to make sure we're not already in a time-consuming task.
         return !plugin.inCombat && !plugin.buryingBones &&
                plugin.getLootQueue().isEmpty();
@@ -45,6 +45,7 @@ public class AttackNPC extends AbstractTask<FighterPlugin, FighterConfig> {
             NPCInteraction.interact(targetNPC, "Attack");
         } else {
             log.info("NPC not found: {}", config.npcTarget());
+            plugin.currState = "NPC not found: " + config.npcTarget();
         }
     }
 
@@ -71,11 +72,18 @@ public class AttackNPC extends AbstractTask<FighterPlugin, FighterConfig> {
                 config.withinDistance()))
                                      .result();
         }
-        if (!config.randomize()) {
-            return npcs.get(0);  
+
+        // Guard to make sure there's actually NPCs; else return null -- higher
+        // up the call-stack can cope with the null.
+        if (!npcs.isEmpty()) {
+            if (!config.randomize()) {
+                return npcs.get(0);  
+            } else {
+                Random rand = new Random();
+                return npcs.get(rand.nextInt(npcs.size()));
+            }
         } else {
-            Random rand = new Random();
-            return npcs.get(rand.nextInt(npcs.size()));
+            return null;
         }
 
         //return plugin.getClient().getNpcs().stream()

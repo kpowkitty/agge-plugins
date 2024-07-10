@@ -68,7 +68,7 @@ public class Pathing {
     //    return goal; 
     //}
 
-    public boolean calculatingPath()
+    public final boolean calculatingPath()
     {
         if (type == Pathing.Type.SHORTEST_PATH) {
             if (calc.get()) {
@@ -88,18 +88,22 @@ public class Pathing {
                 //}
                 if (messageBus.query(MessageID.SEND_PATH)) {
                     msg = (Message<MessageID, List<WorldPoint>>)
-                        messageBus.recieve(MessageID.SEND_PATH);
+                        messageBus.get(MessageID.SEND_PATH);
                     path = (List<WorldPoint>) msg.getData();
                     goal = path.get(path.size() - 1);
                     msg = null;
                     calc.set(false);
+
+                    // Cleanup the MessageBus.
+                    messageBus.remove(MessageID.REQUEST_PATH);
+                    messageBus.remove(MessageID.SEND_PATH);
                 }
             }
         }
         return calc.get();
     }
 
-    public boolean setType(Pathing.Type type)
+    public final boolean setType(Pathing.Type type)
     {
         switch(type) {
         case SHORTEST_PATH:
@@ -118,7 +122,7 @@ public class Pathing {
         }
     }
 
-    public boolean setPath()
+    public final boolean setPath()
     {
         if (goal != null) {
             // Caller forgot to set pathing type, default correct for them.
@@ -152,7 +156,7 @@ public class Pathing {
      * @warning Recursive callback to find valid goal, can be expensive. Make
      * sure to set a valid goal to avoid.
      */
-    public boolean setGoal(WorldPoint goal) {
+    public final boolean setGoal(WorldPoint goal) {
         try {
             log.info("Path to: " + goal);
             this.reset(); // soft-reset, but keep mission-critical state
@@ -193,13 +197,13 @@ public class Pathing {
         return true;
     }
 
-    public boolean isPathingTo(WorldPoint goal)
+    public final boolean isPathingTo(WorldPoint goal)
     {
         log.info("Pathing to...");
         return goal != null && goal.equals(goal);
     }
 
-    public boolean reachedGoal() 
+    public final boolean reachedGoal() 
     {
         //return goal != null && 
         //       goal.equals(ctx.client.getLocalPlayer().getWorldLocation());
@@ -207,13 +211,28 @@ public class Pathing {
                !EthanApiPlugin.isMoving();
     }
 
-    public boolean timeout(int n)
+    public final boolean timeout(int n)
     {
         return true;
     }
 
+    /**
+     * A non-final handle obstacles method that can be overwritten if subclasses
+     * have specific obstacle behavior. It will block the main run method until 
+     * it returns false (done handling obstacles).
+     *
+     * @remark Default behavior does nothing and simply returns false, allowing 
+     * main run method to run freely.
+     *
+     * @return FALSE, default is there are no obstacles to handle
+     */
+    public boolean handleObstacles()
+    {
+        return false;
+    }
+
     // xxx not returning false when done pathing
-    public boolean run() 
+    public final boolean run() 
     {
         ++ticks;
 
@@ -224,72 +243,76 @@ public class Pathing {
             return false;
         }
 
-        //if (path == null && ticks > 5) {
-        //    log.info("Idling with no path. Exiting");
-        //    this.finalizer();
-        //    return false;
-        //}
+        if (!handleObstacles()) {
 
-        if (path != null && path.size() >= 1) {
-            //log.info("Current path goal is: " + path.get(path.size() - 1));
-            ticks = 0;
-            if (currPathDest != null && 
-                !atCurrPathDest() && !EthanApiPlugin.isMoving()) {
+            //if (path == null && ticks > 5) {
+            //    log.info("Idling with no path. Exiting");
+            //    this.finalizer();
+            //    return false;
+            //}
 
-                //log.info("Stopped walking, clicking destination again");
-                MousePackets.queueClickPacket();
-                MovementPackets.queueMovement(currPathDest);
-            }
-                
-            if (currPathDest == null || 
-                atCurrPathDest() || !EthanApiPlugin.isMoving()) {
-                //log.info("Current path destination is " + currPathDest);
+            if (path != null && path.size() >= 1) {
+                //log.info("Current path goal is: " + path.get(path.size() - 1));
+                ticks = 0;
+                if (currPathDest != null && 
+                    !atCurrPathDest() && !EthanApiPlugin.isMoving()) {
 
-                int step = rand.nextInt((35 - 10) + 1) + 10;
-                int max = step;
-                for (int i = 0; i < step; i++) {
-                    if (path.size() - 2 >= i) {
-                        //log.info("Current path is" + path.get(i));
-                        if (isDoored(path.get(i), path.get(i + 1))) {
-                            max = i;
-                            break;
+                    //log.info("Stopped walking, clicking destination again");
+                    MousePackets.queueClickPacket();
+                    MovementPackets.queueMovement(currPathDest);
+                }
+                    
+                if (currPathDest == null || 
+                    atCurrPathDest() || !EthanApiPlugin.isMoving()) {
+                    //log.info("Current path destination is " + currPathDest);
+
+                    int step = rand.nextInt((35 - 10) + 1) + 10;
+                    int max = step;
+                    for (int i = 0; i < step; i++) {
+                        if (path.size() - 2 >= i) {
+                            //log.info("Current path is" + path.get(i));
+                            if (isDoored(path.get(i), path.get(i + 1))) {
+                                max = i;
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (isDoored(getPos(), path.get(0))) {
-                    log.info("Door!");
-                    WallObject wallObject = getTile(getPos()).getWallObject();
-                    if (wallObject == null) {
-                        wallObject = getTile(path.get(0)).getWallObject();
+                    if (isDoored(getPos(), path.get(0))) {
+                        log.info("Door!");
+                        WallObject wallObject = getTile(getPos()).getWallObject();
+                        if (wallObject == null) {
+                            wallObject = getTile(path.get(0)).getWallObject();
+                        }
+                        ObjectPackets.queueObjectAction(
+                            wallObject, false, "Open", "Close");
+                        //log.info("Return TRUE");
+                        return true;
                     }
-                    ObjectPackets.queueObjectAction(
-                        wallObject, false, "Open", "Close");
-                    //log.info("Return TRUE");
-                    return true;
-                }
 
-                step = Math.min(max, path.size() - 1);
-                currPathDest = path.get(step);
-                //log.info("Current path destination is " + currPathDest);
+                    step = Math.min(max, path.size() - 1);
+                    currPathDest = path.get(step);
+                    //log.info("Current path destination is " + currPathDest);
 
-                if (path.indexOf(currPathDest) == (path.size() - 1)) {
-                    log.info("path = null");
-                    path = null;
-                } else {
-                    path = path.subList(step + 1, path.size());
-                    log.info("path.subList(step + 1, path.size())");
-                }
+                    if (path.indexOf(currPathDest) == (path.size() - 1)) {
+                        log.info("path = null");
+                        path = null;
+                    } else {
+                        path = path.subList(step + 1, path.size());
+                        log.info("path.subList(step + 1, path.size())");
+                    }
 
-                if (currPathDest.equals(getPos())) {
-                    log.info("currPathDest equals pos -- Return TRUE");
-                    return true;
+                    if (currPathDest.equals(getPos())) {
+                        log.info("currPathDest equals pos -- Return TRUE");
+                        return true;
+                    }
+                   
+                    //log.info("Sending mouse packets!");
+                    MousePackets.queueClickPacket();
+                    MovementPackets.queueMovement(currPathDest);
                 }
-               
-                //log.info("Sending mouse packets!");
-                MousePackets.queueClickPacket();
-                MovementPackets.queueMovement(currPathDest);
             }
+
         }
 
         //log.info("Reached return TRUE");

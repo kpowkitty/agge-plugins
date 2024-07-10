@@ -29,7 +29,7 @@ public class LootItems extends AbstractTask<FighterPlugin, FighterConfig> {
 
     @Override
     public boolean validate() {
-        log.info("Entering LootItems task validation");
+        //log.info("Entering LootItems task validation");
         return config.shouldLoot() && !plugin.inCombat &&
                !plugin.getLootQueue().isEmpty();
     }
