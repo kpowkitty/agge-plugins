@@ -1,11 +1,11 @@
 /**
- * @file State.java
- * @class State
- * Virtual interface for States to inherit.
+ * @file BooleanState.java
+ * @class BooleanState
+ * Virtual interface for BooleanStates to inherit.
  *
  * @author agge3
  * @version 1.0
- * @since 2024-06-20
+ * @since 2024-07-02
  *
  */
 

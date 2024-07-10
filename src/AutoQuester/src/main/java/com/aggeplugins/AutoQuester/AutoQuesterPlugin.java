@@ -27,6 +27,7 @@ import com.example.EthanApiPlugin.*;
 import com.example.EthanApiPlugin.Collections.*;
 import com.example.InteractionApi.*;
 import com.example.PacketUtils.*;
+import static com.example.EthanApiPlugin.EthanApiPlugin.stopPlugin;
 
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
@@ -49,6 +50,7 @@ import net.runelite.api.Client;
 import net.runelite.client.RuneLite;
 import net.runelite.api.Skill;
 import net.runelite.client.plugins.PluginManager;
+import net.runelite.api.events.GameStateChanged;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
@@ -99,6 +101,7 @@ public class AutoQuesterPlugin extends Plugin {
     public boolean started;
     public int timeout;
     public int idleTicks;
+    public Logger logger;
 
     @Provides
     private AutoQuesterConfig getConfig(ConfigManager configManager) {
@@ -124,7 +127,7 @@ public class AutoQuesterPlugin extends Plugin {
         overlayManager.remove(overlay);
         overlayManager.remove(tileOverlay);
 
-        this.finalizer();
+        this.finalize();
     }
 
     // Entry, game logic:
@@ -133,10 +136,10 @@ public class AutoQuesterPlugin extends Plugin {
         if (!isStarted())
             return;
 
-        if (playerUtil.isInteracting() || player.getAnimation() == -1)
-            idleTicks++;
-        else
-            idleTicks = 0;
+        //if (playerUtil.isInteracting() || player.getAnimation() == -1)
+        //    idleTicks++;
+        //else
+        //    idleTicks = 0;
         
         Action.checkRunEnergy(client);
 
@@ -147,13 +150,6 @@ public class AutoQuesterPlugin extends Plugin {
         //log.info("Curr idx: " + instructions.getIdx());
         //log.info("Size: " + instructions.getSize());
         //log.info("Curr WorldPoint: " + player.getWorldLocation()); 
-    }
-
-    @Subscribe
-    public void onStatChanged(StatChanged event)
-    {
-        if (!started) 
-            return;
     }
 
     @Subscribe
@@ -179,16 +175,6 @@ public class AutoQuesterPlugin extends Plugin {
             return;
     }
 
-    @Subscribe
-    public void onGameStateChanged(GameStateChanged event) 
-    {
-        GameState state = event.getGameState();
-        if (state == GameState.HOPPING || state == GameState.LOGGED_IN)
-            return;
-        // xxx handle stop differently
-        //EthanApiPlugin.stopPlugin(this);
-    }
-
     /**
      * Get the current instruction's name.
      * @return String, the current instruction's name or no instructions
@@ -197,9 +183,18 @@ public class AutoQuesterPlugin extends Plugin {
      */
     public String getInstructionName()
     {
-        if (instructions.getSize() == 0)
-            return "No instructions!";
-        return instructions.getName();
+        //try {
+            if (instructions.getSize() == 0)
+                return "No instructions!";
+            return instructions.getName();
+        //} catch (NullPointerException e) {
+        //    return "Instructions not intialized!";
+        //}
+    }
+
+    public int getInstructionsSize()
+    {
+        return instructions.getSize();
     }
 
     private void init()
@@ -209,6 +204,7 @@ public class AutoQuesterPlugin extends Plugin {
         initClient();
         initInstance();
         initRegistry();
+        initLogging();
 
         // Stop all plugins that AccountBuilder might use, it will control them
         // if it's on.
@@ -222,14 +218,19 @@ public class AutoQuesterPlugin extends Plugin {
             MessageID.INSTRUCTIONS, true));
     }
 
+    private void initLogging()
+    {
+        logger = new Logger();
+    }
+
     private void initClient()
     {   
-        try {
+        //try {
             this.client = RuneLite.getInjector().getInstance(Client.class);
             this.player = client.getLocalPlayer();
-        } catch (NullPointerException e) {
-            log.info("Error: Unable to get client instance variables");
-        }
+        //} catch (NullPointerException e) {
+        //    log.info("Error: Unable to get client instance variables");
+        //}
     }
 
     private void initInstance()
@@ -247,12 +248,12 @@ public class AutoQuesterPlugin extends Plugin {
         }
 
         // Instantiate Context.
-        try {
+        //try {
             this.ctx = new AutoQuesterContext(this, config, client, 
                                               clientThread, instructions);
-        } catch (NullPointerException e) {
-            log.info("Error: Could not create plugin Context, objects not initialized correctly");
-        }
+        //} catch (NullPointerException e) {
+        //    log.info("Error: Could not create plugin Context, objects not initialized correctly");
+        //}
     
         // Lastly, instantiate public instance variables.
         GOAL = null;
@@ -267,7 +268,7 @@ public class AutoQuesterPlugin extends Plugin {
         // Context guaranteed, SAFE to proceed to Instructions Registry.
         this.registry = new Registry(ctx);
             
-        try {
+        //try {
             // Test instructions.
             if (config.testInstructions()) {
                 registry.testInstructions();
@@ -309,9 +310,9 @@ public class AutoQuesterPlugin extends Plugin {
                 registry.theRestlessGhost();
                 log.info("Registered instructions: The Restless Ghost");
             }
-        } catch (NullPointerException e) {
-            log.info("Error: Unable to register instructions");
-        }
+        //} catch (NullPointerException e) {
+        //    log.info("Error: Unable to register instructions");
+        //}
     }
 
     /*
@@ -320,16 +321,25 @@ public class AutoQuesterPlugin extends Plugin {
      */
     private void registerBare()
     {
-        try {
+        //try {
           registry.xMarksTheSpot();
           registry.sheepShearer();
           registry.cooksAssistant();
-        } catch (NullPointerException e) {
-          log.debug("Bare Registry failed!");
-        }
+        //} catch (NullPointerException e) {
+        //  log.debug("Bare Registry failed!");
+        //}
     }
 
-    private void finalizer()
+    @Subscribe
+    protected void onStatChanged(StatChanged e)
+    {
+        if (!started) 
+            return;
+        logger.addExp(e.getSkill(), e.getXp());
+    }
+
+    @Override
+    public void finalize()
     {
         this.started = false;
 
@@ -337,17 +347,21 @@ public class AutoQuesterPlugin extends Plugin {
         this.client = null;
         this.player = null;
 
-        // Release resources for everything and hope garbage collector claims 
-        // them:
+        /* Release resources for everything and hope garbage collector claims 
+         * them: */
         // Instructions should be cleared. @see class Instructions
         this.instructions.clear();
         this.instructions = null;
-        // SAFE to release Context and Registry.
+
+        // SAFE to release Context.
         this.ctx = null;
+
+        // SAFE to finalize and release Registry.
+        this.registry.finalize();
         this.registry = null;
 
-        // Remove the INSTRUCTIONS Message from the MessageBus, other plugins 
-        // are no longer listening for instructions. null the reference
+        // Remove the INSTRUCTIONS Message from the MessageBus; other plugins 
+        // are no longer listening for instructions. null the reference.
         messageBus.remove(MessageID.INSTRUCTIONS);
         messageBus = null;
         msg = null; // in case it wasn't
@@ -387,6 +401,35 @@ public class AutoQuesterPlugin extends Plugin {
             // do nothing    
         } else {
             instructions.skip();
+        }
+    }
+
+    @Subscribe
+    private void onGameStateChanged(GameStateChanged event)
+    {
+        GameState gameState = event.getGameState();
+
+        switch (gameState) {
+            // hard stop gamestates
+            case CONNECTION_LOST:
+            case LOGGING_IN: // xxx maybe
+            case LOGIN_SCREEN:
+            case LOGIN_SCREEN_AUTHENTICATOR:
+            case STARTING:
+            case UNKNOWN: // xxx watch this
+                stopPlugin(this);
+                break;
+            // pause game states
+            case HOPPING:
+                // xxx pause?
+                break;
+            case LOGGED_IN:
+            case LOADING:
+                // normal run
+                break;
+            default: // normal run
+                log.info("GameState case not handled, run by default: " + gameState);
+                break;
         }
     }
 

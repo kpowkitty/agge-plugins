@@ -14,7 +14,7 @@ public class CheckCombatStatus extends AbstractTask<FighterPlugin, FighterConfig
     @Override
     public boolean validate()
     {
-        log.info("Entering CheckCombatStatus task validation");
+        //log.info("Entering CheckCombatStatus task validation");
         return true; // Always run to continuously check and update combat status
     }
 

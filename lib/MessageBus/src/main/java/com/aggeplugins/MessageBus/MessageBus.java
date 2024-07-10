@@ -6,11 +6,15 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Iterator;
 
 @Slf4j
 public class MessageBus {
@@ -100,7 +104,19 @@ public class MessageBus {
         //log.info("Recieved query request for Message with ID: " + id);
         if (this.messages.isEmpty())
             return false;
+        //log.info("Amount of Messages on the MessageBus: " + messages.size());
         return this.messages.get(id) != null;
+    }
+
+    /**
+     * Get the amount of Messages on the MessageBus.
+     * Useful for debugging.
+     *
+     * @return int size, the amount of Messages on the MessageBus.
+     */
+    public synchronized int size()
+    {
+        return this.messages.size();
     }
 
     /**
@@ -171,6 +187,28 @@ public class MessageBus {
         log.info("Recieved clear all Messages request");
         this.messages.clear();
         return this.messages.isEmpty();
+    }
+
+    /**
+     * Clears all Messages EXCEPT the MessageIDs provided.
+     * Useful for MessageBus adminstrators to control the overall state of the
+     * MessageBus, and clear all Messages except what they want to control.
+     *
+     * @param MessageID id, the MessageID that shouldn't be cleared
+     */
+    public synchronized void clearExcept(MessageID... ids) 
+    {
+        Set<MessageID> idSet = new HashSet<>(Arrays.asList(ids));
+
+        Iterator<Map.Entry<MessageID, Message<MessageID, ?>>> iterator = 
+            messages.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<MessageID, Message<MessageID, ?>> entry = iterator.next();
+            if (!idSet.contains(entry.getKey())) {
+                log.info("Removed: " + entry.getKey());
+                iterator.remove();
+            }
+        }
     }
 
     /**

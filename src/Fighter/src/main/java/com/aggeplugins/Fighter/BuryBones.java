@@ -40,7 +40,7 @@ public class BuryBones extends AbstractTask<FighterPlugin, FighterConfig> {
     @Override
     public boolean validate()
     {   
-        log.info("Entering BuryBones task validation");
+        //log.info("Entering BuryBones task validation");
         return config.buryBones() && !plugin.inCombat &&
                plugin.getLootQueue().isEmpty();
     }

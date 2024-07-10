@@ -6,6 +6,7 @@ dependencies {
     compileOnly project(":extern:PiggyPlugins:EthansApi")
     compileOnly project(":lib:PiggyUtils")
     compileOnly project(":lib:lib")
+    compileOnly project(":lib:MessageBus")
 }
 
 sourceSets {

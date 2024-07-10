@@ -50,6 +50,8 @@ import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.lang.Runnable;
 
 @Slf4j
 public class Registry {
@@ -68,6 +70,9 @@ public class Registry {
         this.pathing = new Pathing(this.ctx);
         this.pathing.setType(Pathing.Type.SHORTEST_PATH);
 
+        // Get a MessageBus instance for the Registry.
+        bus = bus.instance();
+
         this.rand = new Random();
         // Random between 1 and 3 (inclusive).
         minWait = 1 + this.rand.nextInt(3);
@@ -85,6 +90,20 @@ public class Registry {
         longWait = 50 + this.rand.nextInt(71);
     }
 
+    @Override
+    public void finalize()
+    {
+        // Clear local instance of the Registry.
+        this.ctx = null;
+        this.instructions = null;
+
+        bus.remove(MessageID.REQUEST_PATH);
+        bus.remove(MessageID.SEND_PATH);
+        this.bus = null;
+
+        this.pathing = null;
+    }
+
     /**
      * @enum InstructionID
      * InstructionID enumeration for Instruction sets (the Instruction map).
@@ -93,6 +112,7 @@ public class Registry {
         MINING_TIN,
         WOODCUTTING_TREE,
         FISHING_SHRIMP,
+        FISHING_TROUT_SALMON,
         MINING_IRON_MITHRIL,
         MINING_IRON_ADAMANT,
         MINING_IRON,
@@ -205,7 +225,7 @@ public class Registry {
 
             put(InstructionID.MINING_TIN,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Mine",
                     new WorldPoint(3172, 3364, 0),
@@ -222,7 +242,7 @@ public class Registry {
 
             put(InstructionID.WOODCUTTING_TREE,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Chop down",
                     new WorldPoint(2953, 3407, 0),
@@ -239,11 +259,11 @@ public class Registry {
 
             put(InstructionID.FISHING_SHRIMP,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Net",
                     new WorldPoint(3245, 3155, 0),
-                    null, // no bank location
+                    BankLocation.NONE, // no bank location
                     new HashMap<>() {{
                         put("TileObject",   "Fishing spot");
                         put("Items",        "Small fishing net");
@@ -254,9 +274,26 @@ public class Registry {
                     Pair.of(Skill.FISHING, 20)
             )));
 
+            put(InstructionID.FISHING_TROUT_SALMON,
+            Pair.of(
+                (id, instr) -> skillerManifest(id, instr), 
+                new Instruction(
+                    "Rod",
+                    new WorldPoint(3245, 3155, 0), // xxx not correct
+                    BankLocation.NONE, // no bank location
+                    new HashMap<>() {{
+                        put("TileObject",   "Rod fishing spot");
+                        put("Items",        "Fishing rod, Feather");
+                        put("KeepItems",    "coins,clue scroll");
+                        put("ShouldBank",   "FALSE");
+                        put("SearchNPC",    "TRUE");
+                    }},
+                    Pair.of(Skill.FISHING, 40)
+            )));
+
             put(InstructionID.MINING_IRON_MITHRIL,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Mine",
                     new WorldPoint(3287, 3367, 0), // varrock east mine
@@ -273,7 +310,7 @@ public class Registry {
 
             put(InstructionID.MINING_IRON_ADAMANT,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Mine",
                     new WorldPoint(3187, 3367, 0),
@@ -290,7 +327,7 @@ public class Registry {
 
             put(InstructionID.MINING_IRON,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Mine",
                     new WorldPoint(2970, 3238, 0), // rimmington mine
@@ -307,7 +344,7 @@ public class Registry {
 
             put(InstructionID.WOODCUTTING_OAK,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Chop down",
                     new WorldPoint(3110, 3253, 0),
@@ -324,7 +361,7 @@ public class Registry {
 
             put(InstructionID.WOODCUTTING_WILLOW_ADAMANT,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Chop down",
                     new WorldPoint(3087, 3236, 0),
@@ -341,7 +378,7 @@ public class Registry {
 
             put(InstructionID.WOODCUTTING_WILLOW,
             Pair.of(
-                (id, instr) -> skillerInstruction(id, instr), 
+                (id, instr) -> skillerManifest(id, instr), 
                 new Instruction(
                     "Chop down",
                     new WorldPoint(3087, 3236, 0),
@@ -358,7 +395,7 @@ public class Registry {
 
             put(InstructionID.STRENGTH_CHICKEN,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Strength",
                     new WorldPoint(3033, 3287, 0),
@@ -375,7 +412,7 @@ public class Registry {
 
             put(InstructionID.ATTACK_CHICKEN,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Attack",
                     new WorldPoint(3033, 3287, 0),
@@ -392,7 +429,7 @@ public class Registry {
 
             put(InstructionID.DEFENCE_CHICKEN,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Defence",
                     new WorldPoint(3033, 3287, 0),
@@ -409,7 +446,7 @@ public class Registry {
 
             put(InstructionID.STRENGTH_COW_MITHRIL,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Strength",
                     new WorldPoint(3031, 3036, 0),
@@ -436,7 +473,7 @@ public class Registry {
 
             put(InstructionID.ATTACK_COW_MITHRIL,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Attack",
                     new WorldPoint(3031, 3036, 0),
@@ -462,7 +499,7 @@ public class Registry {
 
             put(InstructionID.DEFENCE_COW_MITHRIL,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Defence",
                     new WorldPoint(3031, 3036, 0),
@@ -488,7 +525,7 @@ public class Registry {
 
             put(InstructionID.STRENGTH_COW_ADAMANT,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Strength",
                     new WorldPoint(3031, 3036, 0),
@@ -513,7 +550,7 @@ public class Registry {
 
             put(InstructionID.ATTACK_COW_ADAMANT,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Attack",
                     new WorldPoint(3031, 3036, 0),
@@ -538,7 +575,7 @@ public class Registry {
 
             put(InstructionID.DEFENCE_COW_ADAMANT,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Defence",
                     new WorldPoint(3031, 3036, 0),
@@ -563,7 +600,7 @@ public class Registry {
 
             put(InstructionID.MAGIC_CHICKEN,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Magic",
                     new WorldPoint(3033, 3287, 0),
@@ -586,7 +623,7 @@ public class Registry {
 
             put(InstructionID.MAGIC_COW,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Magic",
                     new WorldPoint(3031, 3036, 0),
@@ -609,7 +646,7 @@ public class Registry {
 
             put(InstructionID.RANGED_CHICKEN,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Ranged",
                     new WorldPoint(3033, 3287, 0),
@@ -635,7 +672,7 @@ public class Registry {
 
             put(InstructionID.RANGED_COW_WILLOW,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Ranged",
                     new WorldPoint(3031, 3036, 0),
@@ -659,7 +696,7 @@ public class Registry {
             
             put(InstructionID.RANGED_COW_MAPLE,
             Pair.of(
-                (id, instr) -> fighterInstruction(id, instr), 
+                (id, instr) -> fighterManifest(id, instr), 
                 new Instruction(
                     "Ranged",
                     new WorldPoint(3031, 3036, 0),
@@ -683,138 +720,200 @@ public class Registry {
 
             }};
 
-    public void sendInstructionMessage(MessageID id, Pair<Skill, Integer> level)
+    public void skillerManifest(InstructionID id, Instruction instr)
     {
-        ctx.plugin.messageBus.send(new Message<MessageID, Pair>(id, level));
+        // Only do InstructionID if not already done.
+        if (Action.checkLevelUp(ctx.client, instr.getLevel().getLeft(),
+                                            instr.getLevel().getRight())) {
+            /* SPECIFIC GOES HERE: */
+            switch(id) {
+            case FISHING_SHRIMP:
+                goLumbridgeBank();
+                skillerGetItems(instr);
+                leaveLumbridgeBank(); 
+                // xxx shortest-path is hanging onto it's reference, give it
+                // time for cleanup
+                path(instr.getLocation());
+                break;
+            default:
+                path(instr.getBank().getWorldArea().toWorldPoint());
+                skillerGetItems(instr);
+                // xxx shortest-path is hanging onto it's reference, give it
+                // time for cleanup
+                path(instr.getLocation());
+                break;
+            }
+
+            /* GENERAL GOES HERE: */
+            instructions.registerAsBoolean((Consumer<Instruction>) in ->
+                skillerSetup(in), instr, "Setting up Skiller"
+            );
+            
+            /* FINALIZE: RELEASE CONTROL, AND WAIT FOR CONTROL AGAIN */
+            instructions.registerAsBoolean(() -> {
+                // Clear any stale Messages, AccountBuilder has full control.
+                //bus.clearExcept(MessageID.INSTRUCTIONS);
+                bus.send(new Message<MessageID, Pair<Skill, Integer>>(
+                    MessageID.REQUEST_SKILLING, instr.getLevel()));
+                }, "Sending Skiller request"
+            );
+
+            instructions.register(() -> bus.query(MessageID.DONE_SKILLING),
+                id.toString() + " " + instr.getInfo().get("TileObject"));
+
+            // Cleanup the MessageBus.
+            instructions.registerAsBoolean(() -> {
+                bus.remove(MessageID.REQUEST_SKILLING);
+                bus.remove(MessageID.DONE_SKILLING);
+                }, "Cleaning up Skiller request"
+            );
+        }
     }
 
-    public void waitInstructionMessage(MessageID id, String name)
+    public void skillerGetItems(Instruction instr)
     {
-        instructions.register(() -> ctx.plugin.messageBus.query(id), name);
-    }
+        // xxx many copies and inefficient, maybe worth a second look
+        List<String> list = LibUtil.stringToList(instr.getInfo()
+                                                      .get("Items"));
+        /* @note Will not show at the time when you expect it; this is part
+         * of the manifest, not an instruction. */
+        log.info("List of items (String): " + list);
 
-    public void skillerInstruction(InstructionID id, Instruction instr)
-    {
-        /* GENERAL GOES HERE: */
-        List<String> list = LibUtil.stringToList(instr.getInfo().get("Items"));
         List<Integer> items = new ArrayList<>();
         for (String str : list) {
+            //log.info("Item ID: " + LibUtil.stringToItemId(str));
             items.add(LibUtil.stringToItemId(str));
         }
+        /* @note Will not show at the time when you expect it; this is part
+         *of the manifest, not an instruction. */
+        log.info("List of items (int): " + items);
 
-        path(instr.getBank().getWorldArea().toWorldPoint());
-
-        // Unequip any old/invalid items.
-        instructions.register(new BooleanEquippingState(items)::run,
-                              "Unequipping items"
-        );
-
-        instructions.register(new BooleanBankingState(items)::run,
+        /* @note Give each State a copy of our master items list, they 
+         * WILL modify the list given to them. */
+        instructions.register(new BooleanBankingState(Pair.of(
+                                new ArrayList<Integer>(items), 
+                                new ArrayList<Integer>(items))
+                              )::run,
                               "Getting items"
         );
 
         // Equip new items for Skiller task.
-        instructions.register(new BooleanEquippingState(items)::run,
+        instructions.register(new BooleanEquippingState(
+                                new ArrayList<Integer>(items)
+                              )::run,
                               "Equipping items"
         );
 
-        skillerSetup(instr);
+        // Bank any remaining undesired items.
+        instructions.register(new BooleanBankingState(Pair.of(
+                                null, new ArrayList<Integer>(items))
+                              )::run,
+                              "Banking old items"
+        );
 
-        /* SPECIFIC GOES HERE: */
-        switch(id) {
-        case MINING_TIN:
-        case WOODCUTTING_TREE:
-        case MINING_IRON_MITHRIL:
-        case MINING_IRON_ADAMANT:
-        case MINING_IRON:
-        case WOODCUTTING_OAK:
-        case WOODCUTTING_WILLOW_ADAMANT:
-        case WOODCUTTING_WILLOW:
-            break;
-        case FISHING_SHRIMP:
-            // xxx path to lumbridge bank
-            goLumbridgeBank();
-            break;
-        default:
-            break;
-        }
-        
-        /* FINALIZE: RELEASE CONTROL, AND WAIT FOR CONTROL AGAIN */
-        sendInstructionMessage(MessageID.REQUEST_SKILLING, instr.getLevel());
-        waitInstructionMessage(MessageID.DONE_SKILLING, 
-            instr.getTask() + " " + instr.getInfo().get("TileObject"));
+        // Null our items and signal the gc, no reason to hang on to the
+        // memory.
+        items = null;
     }
 
-    public void fighterInstruction(InstructionID id, Instruction instr)
+    public void fighterManifest(InstructionID id, Instruction instr)
     {
-        switch(instr.getTask()) {
-        case "Strength":
-            List<String> list = LibUtil.stringToList(instr.getInfo()
-                                                          .get("Items"));
-            List<Integer> items = new ArrayList<>();
-            for (String str : list) {
-                items.add(LibUtil.stringToItemId(str));
+        // Only do InstructionID if not already done.
+        if (Action.checkLevelUp(ctx.client, instr.getLevel().getLeft(),
+                                            instr.getLevel().getRight())) {
+            /* @note Can also be switched with the InstructionID, but this works
+             * and doesn't force typing full enum IDs. */
+            switch(instr.getTask()) {
+            case "Strength":
+                List<String> list = LibUtil.stringToList(
+                    instr.getInfo().get("Items"));
+                List<Integer> items = new ArrayList<>();
+                for (String str : list) {
+                    items.add(LibUtil.stringToItemId(str));
+                }
+
+                path(instr.getBank().getWorldArea().toWorldPoint());
+
+                /* @note Give each State a copy of our master items list, they
+                 * WILL modify the list given to them. */
+                instructions.register(new BooleanBankingState(Pair.of(
+                                        new ArrayList<Integer>(items), null)
+                                      )::run,
+                                      "Getting items"
+                );
+
+                // Equip items and unequip any old items.
+                instructions.register(new BooleanEquippingState(
+                                        new ArrayList<Integer>(items)
+                                      )::run,
+                                      "Equipping items"
+                );
+
+                // Bank any remaining undesired items.
+                instructions.register(new BooleanBankingState(Pair.of(
+                                        null, new ArrayList<Integer>(items))
+                                      )::run,
+                                      "Banking old items"
+                );
+
+                // Change attack style to strength.
+                instructions.register(() -> AttackStyleUtil.changeAttackStyle(
+                    AttackStyle.AGGRESSIVE),
+                    "Changing to aggressive"
+                );
+
+                // Finally, path to location and (after) send control to
+                // Fighter.
+                path(instr.getLocation());
+                break;
+            case "Attack":
+                // Strength always comes before, it did a lot of setup -- expect 
+                // that.
+                // Change attack style.
+                instructions.register(() -> AttackStyleUtil.changeAttackStyle(
+                    AttackStyle.ACCURATE),
+                    "Changing to accurate"
+                );
+                // Everything else is taken care of, give control back to 
+                // Fighter.
+                break;
+            case "Defence":
+                // Same as attack.
+                instructions.register(() -> AttackStyleUtil.changeAttackStyle(
+                    AttackStyle.DEFENSIVE),
+                    "Changing to defensive"
+                );
+                break;
+            default:
+                // xxx no default
+                break;
             }
 
-            path(instr.getBank().getWorldArea().toWorldPoint());
-
-            instructions.register(new BooleanBankingState(items)::run,
-                                  "Getting items"
+            instructions.registerAsBoolean((Consumer<Instruction>) in ->
+                fighterSetup(in), instr, "Setting up Fighter"
             );
 
-            // Equip items and unequip any old items.
-            instructions.register(new BooleanEquippingState(items)::run,
-                                  "Equipping items"
+            instructions.registerAsBoolean(() -> {
+                bus.send(new Message<MessageID, Pair<Skill, Integer>>(
+                    MessageID.REQUEST_FIGHTING, instr.getLevel()));
+                }, "Sending Fighter request"
             );
 
-            // Bank any remaining undesired items.
-            instructions.register(new BooleanBankingState(items)::run,
-                                  "Banking old items"
-            );
+            instructions.register(() -> bus.query(MessageID.DONE_FIGHTING), 
+                id.toString() + " " + instr.getInfo().get("NPC"));
 
-            // Change attack style to strength.
-            instructions.register(() -> AttackStyleUtil.changeAttackStyle(
-                AttackStyle.AGGRESSIVE),
-                "Changing to aggressive"
+            // Cleanup the MessageBus.
+            instructions.registerAsBoolean(() -> {
+                bus.remove(MessageID.REQUEST_FIGHTING);
+                bus.remove(MessageID.DONE_FIGHTING);
+                }, "Cleaning up Fighter request"
             );
-
-            // Finally, path to location and (after) send control to Fighter.
-            path(instr.getLocation());
-            break;
-        case "Attack":
-            // Strength always comes before, it did a lot of setup -- expect 
-            // that.
-            // Change attack style.
-            instructions.register(() -> AttackStyleUtil.changeAttackStyle(
-                AttackStyle.ACCURATE),
-                "Changing to accurate"
-            );
-            // Everything else is taken care of, give control back to Fighter.
-            break;
-        case "Defence":
-            // Same as attack.
-            instructions.register(() -> AttackStyleUtil.changeAttackStyle(
-                AttackStyle.DEFENSIVE),
-                "Changing to defensive"
-            );
-            break;
-        default:
-            // xxx no default
-            break;
         }
-
-        fighterSetup(instr);
-
-        sendInstructionMessage(MessageID.REQUEST_FIGHTING, instr.getLevel());
-
-        // xxx maybe change instruction name to InstructionID
-        waitInstructionMessage(MessageID.DONE_FIGHTING, 
-            instr.getTask() + " training " + instr.getInfo().get("NPC") + "s");
     }
 
     public void fighterSetup(Instruction instr)
     {
-        try {
+        //try {
             ctx.plugin.configManager.setConfiguration(
                 "Fighter", "npcTarget", instr.getInfo().get("NPC"));
             ctx.plugin.configManager.setConfiguration(
@@ -833,14 +932,14 @@ public class Registry {
                 ctx.plugin.configManager.setConfiguration(
                     "Fighter", "buryBones", false);
             }
-        } catch (NullPointerException e) {
-            log.info(instr.getTask() + " Instruction setup failed!");
-        }
+        //} catch (NullPointerException e) {
+        //    log.info(instr.getTask() + " Instruction setup failed!");
+        //}
     }
 
     public void skillerSetup(Instruction instr)
     {
-        try {
+        //try {
             ctx.plugin.configManager.setConfiguration(
                 "Skiller", "skillingX", instr.getLocation().getX());
             ctx.plugin.configManager.setConfiguration(
@@ -857,8 +956,18 @@ public class Registry {
             ctx.plugin.configManager.setConfiguration(
                 "Skiller", "objectToInteract", instr.getInfo()
                                                     .get("TileObject"));
-            ctx.plugin.configManager.setConfiguration(
-                "Skiller", "toolsToUse", instr.getInfo().get("Items"));
+
+            // Index 0 of the string "list" will always be the tool.
+            List<String> tools = LibUtil.stringToList(instr.getInfo()
+                                                           .get("Items"));
+            if (!tools.isEmpty()) {
+                String tool = tools.get(0);
+                ctx.plugin.configManager.setConfiguration(
+                    "Skiller", "toolsToUse", tool);
+            } else {
+                throw new IllegalStateException("No tools available to use");
+            }
+
             ctx.plugin.configManager.setConfiguration(
                 "Skiller", "itemToKeep", instr.getInfo().get("KeepItems"));
             if ("TRUE".equals(instr.getInfo().get("ShouldBank"))) {
@@ -876,9 +985,9 @@ public class Registry {
                 ctx.plugin.configManager.setConfiguration(
                     "Skiller", "searchNpc", false);
             }
-        } catch (NullPointerException e) {
-            log.info(instr.getTask() + " " + instr.getInfo().get("TileObject") + " Instruction setup failed!");
-        }
+        //} catch (NullPointerException e) {
+        //    log.info(instr.getTask() + " " + instr.getInfo().get("TileObject") + " Instruction setup failed!");
+        //}
     }
 
     public void bronzeInstructions()
@@ -906,7 +1015,9 @@ public class Registry {
 
         path(BankLocation.GRAND_EXCHANGE.getWp());
             
-        instructions.register(new BooleanBankingState(items)::run,
+        instructions.register(new BooleanBankingState(Pair.of(
+            new ArrayList<Integer>(items), null)
+                              )::run,
                               "Withdrawing sell items"
         );
 
@@ -955,7 +1066,7 @@ public class Registry {
             "Using GE"
         );
 
-        instructions.register(new BooleanBankingState(null)::run, 
+        instructions.register(new BooleanBankingState(Pair.of(null, null))::run, 
                               "Depositing all items"
         );
     }
@@ -984,7 +1095,9 @@ public class Registry {
 
         path(BankLocation.GRAND_EXCHANGE.getWp());
             
-        instructions.register(new BooleanBankingState(items)::run,
+        instructions.register(new BooleanBankingState(Pair.of(
+            new ArrayList<Integer>(items), null)
+                              )::run,
                               "Withdrawing sell items"
         );
 
@@ -1027,9 +1140,10 @@ public class Registry {
             "Using GE"
         );
 
-        instructions.register(new BooleanBankingState(null)::run, 
+        instructions.register(new BooleanBankingState(Pair.of(null, null))::run, 
                               "Depositing all items"
         );
+
     }
 
     public void buyMagic()
@@ -1165,10 +1279,16 @@ public class Registry {
     // be removed. Then move on to the next instruction.
     public void testInstructions()
     {
-        //register(() -> AttackStyleUtil.changeAttackStyle(AttackStyle.ACCURATE));
-        //block(1000000);
+        List<Integer> items = new ArrayList<>();
+        items.add(ItemID.BRONZE_SWORD);
+        items.add(ItemID.BRONZE_ARROW);
+        instructions.register(new BooleanEquippingState(
+                                new ArrayList<Integer>(items)
+                              )::run,
+                              "Unequipping items"
+        );
 
-
+        //buyMithril();
     }
 
     public void xMarksTheSpot()
@@ -2156,4 +2276,5 @@ public class Registry {
     private Instructions instructions;
     private Pathing pathing;
     private AutoQuesterContext ctx;
+    private MessageBus bus;
 }

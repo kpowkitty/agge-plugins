@@ -19,13 +19,14 @@ import com.aggeplugins.lib.StateStack.*;
 import com.aggeplugins.MessageBus.*;
 
 import com.example.EthanApiPlugin.Collections.*;
-import com.example.EthanApiPlugin.Collections.query.TileObjectQuery;
+import com.example.EthanApiPlugin.Collections.query.*;
 import com.example.EthanApiPlugin.EthanApiPlugin;
 import com.example.InteractionApi.BankInventoryInteraction;
 import com.example.InteractionApi.InventoryInteraction;
 import com.example.InteractionApi.NPCInteraction;
 import com.example.InteractionApi.TileObjectInteraction;
 import com.piggyplugins.PiggyUtils.BreakHandler.ReflectBreakHandler;
+import static com.example.EthanApiPlugin.EthanApiPlugin.stopPlugin;
 //import shortestpath.ShortestPathPlugin;
 //import static shortestpath.ShortestPathPlugin.getPathfinder;
 
@@ -45,6 +46,7 @@ import net.runelite.api.Client;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.api.Skill;
+import net.runelite.api.events.GameStateChanged;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -90,6 +92,7 @@ public class SkillerPlugin extends Plugin {
     private MessageBus messageBus;
     private Message<MessageID, ?> msg;
     private Pair<Skill, Integer> pair;
+    private boolean block;
 
     public boolean started;
     public String currState = "";
@@ -123,6 +126,8 @@ public class SkillerPlugin extends Plugin {
 
         // Random delay 0-7 between actions.
         timeout = RandomUtil.randTicks();    
+
+        block = true; // start blocking by default
     }
 
     private void initInstance()
@@ -214,21 +219,30 @@ public class SkillerPlugin extends Plugin {
             // We do an early return if the user isn't logged in
             return;
         }
-        
+       
+        // If there's instructions, let AccountBuilder control -- skip to entry
+        // if there's not.
+        if (messageBus.query(MessageID.INSTRUCTIONS)) {
+            // If we've listened for a request, then handle the request.
+            //log.info("Listening for a skilling request...");
+            if (!messageBus.query(MessageID.REQUEST_SKILLING)) {
+                // Break-out and block everything else until recieving a 
+                // request.
+                //log.info("No skilling request! Blocking...");
+                currState = "Waiting for instructions";
+                return;
+            } else {
+                //log.info("Handling instructions...");
+                handleInstructions();
+            }
+        }
+
+        /* Entry: */
+        log.info("Skiller is not being blocked!");
+
         // Set the current overlay State name to the top of the StateStack.
         if (stack.size() > 1) // let skilling control its own name
             currState = stack.peekName();
-
-        if (messageBus.query(MessageID.INSTRUCTIONS)) {
-            // Don't run, instead listen for instructions if being controlled by
-            // AccountBuilder.
-            if (!messageBus.query(MessageID.REQUEST_SKILLING)) {
-                log.info("No skilling request!");
-                return;
-            }
-            // else, handle instructions
-            handleInstructions();
-        }
 
         // For current WorldPoint polling (to find skilling location 
         // WorldPoint(s)).
@@ -237,9 +251,14 @@ public class SkillerPlugin extends Plugin {
                 client.getLocalPlayer().getWorldLocation());
         }
 
-        // Block all actions behind a random delay.
-        if (timeout-- > 0) {
-            log.info("Delaying actions: {}", timeout);
+        // (For listed States) Block all actions behind a random delay.
+        // xxx have this on state change too?
+        StateID active = stack.peekId();
+        if ((active == StateID.SKILLING ||
+            active == StateID.PATHING) &&
+            timeout-- > 0) {
+            //log.info("Delaying actions: {}", timeout);
+            currState = "Tick delay: " + timeout;
             return;
         }
 
@@ -266,20 +285,32 @@ public class SkillerPlugin extends Plugin {
         }
     };
 
+    private boolean listen()
+    {
+        if (!messageBus.query(MessageID.REQUEST_SKILLING)) {
+            //log.info("No skilling request!");
+            currState = "Waiting for instructions";
+            return false;
+        }
+
+        return true;
+    }
+
     private void handleInstructions()
     {
         if (msg == null) {
             msg = (Message<MessageID, Pair<Skill, Integer>>)
                 messageBus.get(MessageID.REQUEST_SKILLING);
             pair = (Pair<Skill, Integer>) msg.getData();
-        } else if (Action.checkLevelUp(client, pair.getLeft(),
-                                               pair.getRight())) {
+        // xxx also wait for inventory to be full, otherwise is abrubt!
+        } else if (!Action.checkLevelUp(client, pair.getLeft(),
+                                                pair.getRight()) &&
+                   Inventory.full()) {
             log.info("Done skilling! Releasing control...");
             messageBus.send(new Message<MessageID, Boolean>(
                 MessageID.DONE_SKILLING, true));
 
             // cleanup
-            messageBus.remove(MessageID.REQUEST_SKILLING);
             msg = null;
             pair = null;
         }
@@ -294,6 +325,35 @@ public class SkillerPlugin extends Plugin {
             breakHandler.stopPlugin(this);
         } else {
             breakHandler.startPlugin(this);
+        }
+    }
+
+    @Subscribe
+    private void onGameStateChanged(GameStateChanged event)
+    {
+        GameState gameState = event.getGameState();
+
+        switch (gameState) {
+            // hard stop gamestates
+            case CONNECTION_LOST:
+            case LOGGING_IN: // xxx maybe
+            case LOGIN_SCREEN:
+            case LOGIN_SCREEN_AUTHENTICATOR:
+            case STARTING:
+            case UNKNOWN: // xxx watch this
+                stopPlugin(this);
+                break;
+            // pause game states
+            case HOPPING:
+                // xxx pause?
+                break;
+            case LOGGED_IN:
+            case LOADING:
+                // normal run
+                break;
+            default: // normal run
+                log.info("GameState case not handled, run by default: " + gameState);
+                break;
         }
     }
 }

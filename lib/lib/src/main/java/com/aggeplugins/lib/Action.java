@@ -51,6 +51,23 @@ public class Action {
         _ticks = 0;
     }
 
+    //public static boolean checkGameState(GameStateChanged e)
+    //{
+    //}
+    
+    public static boolean checkForEquipment(List<Integer> equipment)
+    {
+    //    // Because of how Actions are designed to be a "one-tap" boolean in a
+    //    // game tick, we need to guard our initialization to only be seen once.
+    //    if (!init) {
+    //        Iterator<Integer> it = equipment.iterator();
+    //        Iterator<EquipmentSlotIterator> slotIt = 
+    //            new EqiupmentSlotIterator();
+    //    }
+
+        return true;
+    }
+
     public static boolean continueDialogue() {
          log.info("Entering cont dialog");
          Optional<Widget> mainContinueOpt = Widgets.search().withTextContains(
@@ -212,8 +229,9 @@ public class Action {
     public static void checkRunEnergy(Client client) 
     {
         Random rand = new Random();
+         // random 30-50
         if (client.getVarpValue(173) == 0 && 
-            client.getEnergy() >= rand.nextInt(50) * 100) { // random 0-50
+            client.getEnergy() >= (30 + rand.nextInt(21)) * 100) {            
             MousePackets.queueClickPacket();
             WidgetPackets.queueWidgetActionPacket(1, 10485787, -1, -1);
         }
@@ -221,9 +239,7 @@ public class Action {
 
     public static boolean checkLevelUp(Client client, Skill skill, int level)
     {
-        if (client.getRealSkillLevel(skill) == level)
-            return true;
-        return false;
+        return client.getRealSkillLevel(skill) < level;
     }
 
     public static boolean isInteractingNPC(Client client)

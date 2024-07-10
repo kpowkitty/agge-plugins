@@ -23,7 +23,7 @@ public class CheckStats extends AbstractTask<FighterPlugin, FighterConfig> {
     @Override
     public boolean validate()
     {
-        log.info("Entering CheckStates task validation");
+        //log.info("Entering CheckStates task validation");
         return config.shouldEat();
     }
 

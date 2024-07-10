@@ -41,7 +41,7 @@ public class UsePotion extends AbstractTask<FighterPlugin, FighterConfig> {
     @Override
     public boolean validate()
     {   
-        log.info("Entering UsePotion task validation");
+        //log.info("Entering UsePotion task validation");
         // xxx better validation
         return config.useCombatPotion() || config.useRangingPotion() || 
                config.usePrayerPotion();

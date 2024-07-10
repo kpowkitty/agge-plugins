@@ -8,12 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
-
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.Iterator;
 
 @Slf4j
 public class MessageBus {
@@ -147,6 +145,38 @@ public class MessageBus {
     {
         log.info("Message from " + id + " removed from the MessageBus");
         this.messages.remove(id);
+    }
+
+    /**
+     * Clears all Messages from the MessageBus.
+     *
+     * @warning Will clear ALL Messages. Be careful!
+     */
+    public synchronized void clear()
+    {
+        this.messages.clear();
+    }
+
+    /**
+     * Clears all Messages EXCEPT the MessageIDs provided.
+     * Useful for MessageBus adminstrators to control the overall state of the
+     * MessageBus, and clear all Messages except what they want to control.
+     *
+     * @param MessageID id, the MessageID that shouldn't be cleared
+     */
+    public synchronized void clearExcept(MessageID... id)
+    {
+        Set<MessageID> idSet = new HashSet<>(Arrays.asList(ids));
+
+        Iterator<Map.Entry<MessageID, Message>> iterator = 
+            messages.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<MessageID, Message> entry = iterator.next();
+            if (!idSet.contains(entry.getKey())) {
+                log.info("Removed: " + entry.getKey());
+                iterator.remove();
+            }
+        } 
     }
 
     ///**

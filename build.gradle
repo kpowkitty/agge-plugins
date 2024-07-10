@@ -26,6 +26,13 @@ allprojects {
             testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
         }
     }
+
+    // xxx make this work
+    // Task to copy resources from root res to build/resources/main
+    //task copyResources(type: Copy) {
+    //    from 'res' // Source directory of your fonts (relative to root)
+    //    into "${buildDir}/resources/main" // Destination in build output
+    //}
 }
 
 dependencies {
@@ -59,13 +66,10 @@ dependencies {
 }
 
 sourceSets {
-
     main {
-
         java {
             srcDir "src"
         }
-
     }
 }
 
@@ -80,6 +84,9 @@ task FatJar(type: Jar) {
     baseName = 'agge-plugins'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    // xxx make this work
+    // Copy resources for plugins.
+    //from copyResources
     with jar
 }
 

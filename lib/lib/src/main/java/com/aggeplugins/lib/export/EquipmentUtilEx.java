@@ -17,17 +17,25 @@ import com.aggeplugins.lib.export.*;
 import com.example.EthanApiPlugin.Collections.Equipment;
 import com.example.EthanApiPlugin.Collections.EquipmentItemWidget;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.Iterator;
 
+@Slf4j
 public class EquipmentUtilEx {
     public static Optional<EquipmentItemWidget> getItemInSlot(
                                                     EquipmentSlotEx slot) 
     {
+        //List<EquipmentItemWidget> l = Equipment.search().result();
+        //log.info("Number of equipped items: " + l.size());
+
         return Equipment.search().filter(item -> {
+            //log.info("Item match found!");
             EquipmentItemWidget iw = (EquipmentItemWidget) item;
+            //log.info("wIdx: " + iw.getEquipmentIndex() + "; sIdx: " + slot.getIdx()); 
             return iw.getEquipmentIndex() == slot.getIdx();
         }).first();
     }

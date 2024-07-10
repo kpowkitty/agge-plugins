@@ -30,11 +30,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.BiConsumer;
+import java.lang.Runnable;
 import java.util.Vector;
 import java.util.ArrayList;
 
 @Slf4j
 public class Instructions {
+    // xxx make this a singleton, it's better fit that way
     public Instructions()
     {
         log.info("Constructing Instructions!");
@@ -111,6 +115,54 @@ public class Instructions {
     {
         _instructions.add(instruction);
         _names.add(name);
+    }
+
+    /**
+     * Register a BiConsumer as a BooleanSupplier step with wildcard parameters.
+     * @param f The BiConsumer to register.
+     * @param arg1 The first argument for the BiConsumer.
+     * @param arg2 The second argument for the BiConsumer.
+     * @param name The name of the step.
+     * @param <T> The type of the first argument of the BiConsumer.
+     * @param <U> The type of the second argument of the BiConsumer.
+     */
+    public <T, U> void registerAsBoolean(
+            BiConsumer<? super T, ? super U> f, T t, U u, String name) {
+        this.register(() -> {
+            f.accept(t, u);
+            return true;
+        }, name);
+    }
+
+    /**
+     * Register a Consumer as a BooleanSupplier step with wildcard parameter.
+     * @param f The Consumer to register.
+     * @param arg The argument for the Consumer.
+     * @param name The name of the step.
+     * @param <T> The type of the Consumer argument.
+     */
+    public <T> void registerAsBoolean(
+            Consumer<? super T> f, T t, String name)
+    {
+        this.register(() -> {
+            f.accept(t);
+            return true;
+            }, name
+        );
+    }
+
+    /**
+     * Register a Runnable as a BooleanSupplier step.
+     * @param f The Runnable to register.
+     * @param name The name of the step.
+     */
+    public void registerAsBoolean(Runnable f, String name)
+    {
+        this.register(() -> {
+            f.run();
+            return true;
+            }, name
+        );
     }
 
     /**

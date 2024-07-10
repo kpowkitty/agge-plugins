@@ -53,69 +53,115 @@ public class BooleanEquippingState<T> extends BooleanState<T> {
         }
 
         this.slotIt = new EquipmentSlotExIterator();
+
+        block = false;
+    }
+
+    private boolean canEquip(int id)
+    {
+        return !Inventory.search().withId(id).withAction("Equip").empty() ||
+               !Inventory.search().withId(id).withAction("Wear").empty() ||
+               !Inventory.search().withId(id).withAction("Wield").empty();
+    }
+
+    private boolean inInventory(int id)
+    {
+        return Inventory.search().withId(id).first().isPresent();
     }
 
     @Override
     public boolean run()
     {
         // State 1: Equipping items and logging equipment
-        Iterator<Integer> it = items.iterator();
+        equipping: {
+            Iterator<Integer> it = items.iterator();
+            if (it.hasNext()) {
+                Integer item = it.next();
+                log.info("Item ID: " + item);
 
-        if (it.hasNext()) {
-            Integer item = it.next();
-
-            InventoryInteraction.useItem(item, "Equip", "Wear", "Wield");
-
-            // Guard until item is not in inventory, to safely remove and not
-            // lose items in the game tick logic.
-            if (!Inventory.search()
-                          .withId(item)
-                          .first().isPresent()) {
-
-                // Loop over all equipment slots and remove the equipped item.
-                while (slotIt.hasNext()) {
-                    EquipmentSlotEx slot = slotIt.next();
-                    EquipmentUtilEx.getItemInSlot(slot).ifPresent(i -> {
-                        if (i.equals(item)) {
-                            slotIt.remove();
-                        }
-                    });
+                if (!canEquip(item) && !block) {
+                    // just remove and move next, we can't equip this item
+                    removeSlot(item);
+                    it.remove();
+                    break equipping;
                 }
 
-                // Looped through all equipment slots, reset iterator for next
-                // game loop.
-                slotIt.reset();
+                log.info("Able to equip item ID: " + item);
+                InventoryInteraction.useItem(item, "Equip", "Wear", "Wield");
+                block = true;
 
-                // Safe to remove the item now, properly guarded and all
-                // procedures done.
-                it.remove();
+                // Guard until item is not in inventory, to safely remove and 
+                // not lose items in the game tick logic.
+                if (!inInventory(item)) {
+                    removeSlot(item);
+                    log.info("Sucessfully equipped item ID: " + item);
+                    // Safe to remove the item now, properly guarded and all 
+                    // procedures done.
+                    it.remove();
+                    block = false; // release block
+                    break equipping;
+                }
+
+                break equipping;
             }
-
-            // Break-out, until equipped all items.
-            return false;        
         }
 
         // State 2: Unequipping all items left in equipment
-        if (slotIt.hasNext()) {
-            EquipmentSlotEx slot = slotIt.next();
+        unequipping: {
+            slotIt.reset();
+            if (slotIt.hasNext()) {
+                EquipmentSlotEx slot = slotIt.next();
 
-            EquipmentUtilEx.getItemInSlot(slot).ifPresent(i -> {
-                i.interact("Remove");
-            });
+                EquipmentUtilEx.getItemInSlot(slot).ifPresent(w -> {
+                    w.interact("Remove");
+                    log.info("Successfully removed item ID: " + w.getEquipmentItemId());
+                });
 
-            // Guards against missing actions due to game tick update.
-            if (!EquipmentUtilEx.getItemInSlot(slot).isPresent()) {
-                slotIt.remove();
+                // Guards against missing actions due to game tick update.
+                if (!EquipmentUtilEx.getItemInSlot(slot).isPresent()) {
+                    //log.info("Entering equipment slot removal routine...");
+                    slotIt.remove();
+                    break unequipping;
+                }
+
+                break unequipping; // keep trying to unequip until we're done
             }
-
-            // Break-out, until done unequipping items.
-            return false;
         }
 
         // Guard the return true, both of these should be empty.
         return items.isEmpty() && slotIt.isEmpty();
     }
 
+    private boolean removeSlot(int id) 
+    {
+        // Make sure iterator is reset before looping all slots.
+        slotIt.reset();
+
+        // Loop over all equipment slots and remove the equipped item.
+        while (slotIt.hasNext()) {
+            EquipmentSlotEx slot = slotIt.next();
+            log.info("Equipment slots remaining: " + slotIt.size());
+
+            //log.info("On equipment slot: " + slot.getIdx());
+            Optional<EquipmentItemWidget> widget = 
+                EquipmentUtilEx.getItemInSlot(slot);
+
+            if (widget.isPresent()) {
+                log.info("Equipment slot match found!\n" +
+                    "Equipment slot item ID: " + widget.get().getEquipmentItemId() + "\n" +
+                    "Item to equip ID: " + id);
+                if (widget.get().getEquipmentItemId() == id) {
+                    log.info("Equipment slot ID matches item ID. Removing from equipment slot list...");
+                    slotIt.remove();
+                    return true; // release control
+                }
+            }
+        }
+
+        return false;
+    }
+
     private List<Integer> items;
     private EquipmentSlotExIterator slotIt;
+    private boolean block;
 }

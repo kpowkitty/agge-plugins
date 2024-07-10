@@ -84,6 +84,11 @@ public enum EquipmentSlotEx {
         {
             return slots.isEmpty();
         }
+
+        public int size()
+        {
+            return slots.size();
+        }
     }
 
     // Method to get a mutable list of EquipmentSlotEx values.
